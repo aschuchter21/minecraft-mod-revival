@@ -1,35 +1,35 @@
 /*
- * Copyright (c) 2021-2026 Team Galacticraft
+ * Copyright (c) 2021-2023 Team Galacticraft
  * MIT License
  */
 package dev.galacticraft.machinelib.api.machine;
 
 import dev.galacticraft.machinelib.impl.machine.MachineStatusImpl;
-import net.minecraft.ChatFormatting;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceLocation;
 
-/** Binary-compatible server-side subset of MachineLib 0.3's machine status API. */
+/** MachineLib 0.2-compatible status object used by Galacticraft 1.20.1. */
 public interface MachineStatus {
+    MachineStatus INVALID = create(Component.translatable("status.machinelib.invalid"), Type.OTHER);
+
     static MachineStatus create(Component name, Type type) {
         return new MachineStatusImpl(name, type);
     }
 
-    static MachineStatus create(String key, ChatFormatting color, Type type) {
-        return create(Component.translatable(key).setStyle(Style.EMPTY.withColor(color)), type);
+    /**
+     * Registry serialization is part of the later networking checkpoint. Keeping
+     * this factory source-compatible lets Galacticraft declare its status constants
+     * now without Fabric registry calls.
+     */
+    static MachineStatus createAndRegister(ResourceLocation id, Component name, Type type) {
+        return create(name, type);
     }
 
-    Component getText();
-    Type getType();
+    Component name();
+    Type type();
 
-    default void writePacket(MachineType<?, ?> type, FriendlyByteBuf buf) {
-        buf.writeByte(type.statusDomain().indexOf(this));
-    }
-
-    static MachineStatus readPacket(MachineType<?, ?> type, FriendlyByteBuf buf) {
-        return type.statusDomain().get(buf.readByte());
-    }
+    default Component getText() { return name(); }
+    default Type getType() { return type(); }
 
     enum Type {
         WORKING(true), PARTIALLY_WORKING(true), MISSING_RESOURCE(false), MISSING_FLUIDS(false),
