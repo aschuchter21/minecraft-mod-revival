@@ -7,6 +7,8 @@ package dev.galacticraft.machinelib.impl.storage;
 import dev.galacticraft.machinelib.api.filter.ResourceFilter;
 import dev.galacticraft.machinelib.api.storage.MachineItemStorage;
 import dev.galacticraft.machinelib.api.storage.slot.ItemResourceSlot;
+import dev.galacticraft.machinelib.api.storage.slot.SlotGroup;
+import dev.galacticraft.machinelib.api.storage.slot.SlotGroupType;
 import dev.galacticraft.machinelib.api.transfer.ResourceFlow;
 import dev.galacticraft.machinelib.forge.item.ForgeItemStorageAdapter;
 import net.minecraft.nbt.CompoundTag;
@@ -16,12 +18,15 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.IItemHandler;
 
 import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 public final class MachineItemStorageImpl implements MachineItemStorage {
     public static final MachineItemStorageImpl EMPTY = new MachineItemStorageImpl(new ItemResourceSlot[0]);
 
     private final ItemResourceSlot[] slots;
+    private final Map<SlotGroupType, SlotGroup<Item, ItemStack, ItemResourceSlot>> groups = new IdentityHashMap<>();
     private Runnable listener;
 
     public MachineItemStorageImpl(ItemResourceSlot[] slots) {
@@ -29,11 +34,33 @@ public final class MachineItemStorageImpl implements MachineItemStorage {
         for (ItemResourceSlot slot : this.slots) slot.setListener(this::markModified);
     }
 
+    public MachineItemStorageImpl(SlotGroupType[] types, SlotGroup<Item, ItemStack, ItemResourceSlot>[] groups) {
+        if (types.length != groups.length) throw new IllegalArgumentException("type/group length mismatch");
+        int total = 0;
+        for (SlotGroup<Item, ItemStack, ItemResourceSlot> group : groups) total += group.size();
+        this.slots = new ItemResourceSlot[total];
+        int offset = 0;
+        for (int i = 0; i < groups.length; i++) {
+            SlotGroup<Item, ItemStack, ItemResourceSlot> group = groups[i];
+            this.groups.put(types[i], group);
+            for (ItemResourceSlot slot : group) {
+                slot.assignInputType(types[i].inputType());
+                slot.setListener(this::markModified);
+                this.slots[offset++] = slot;
+            }
+        }
+    }
+
     @Override public int size() { return this.slots.length; }
     @Override public int getContainerSize() { return this.slots.length; }
     @Override public ItemResourceSlot slot(int slot) { return this.slots[slot]; }
     @Override public ItemResourceSlot[] getSlots() { return this.slots.clone(); }
-    @Override public ResourceFilter<Item> getStrictFilter(int slot) { return this.slots[slot].getFilter(); }
+    @Override public ResourceFilter<Item> getStrictFilter(int slot) { return this.slots[slot].getStrictFilter(); }
+    @Override public SlotGroup<Item, ItemStack, ItemResourceSlot> getGroup(SlotGroupType type) {
+        SlotGroup<Item, ItemStack, ItemResourceSlot> group = this.groups.get(type);
+        if (group == null) throw new IllegalArgumentException("Unknown slot group: " + type.name().getString());
+        return group;
+    }
     @Override public void setListener(Runnable listener) { this.listener = listener; }
     @Override public IItemHandler getExposedStorage(ResourceFlow flow) { return new ForgeItemStorageAdapter(this, flow); }
     @Override public Iterator<ItemResourceSlot> iterator() { return Arrays.asList(this.slots).iterator(); }
@@ -85,7 +112,6 @@ public final class MachineItemStorageImpl implements MachineItemStorage {
     }
 
     @Override public ItemStack getItem(int slot) { return this.slots[slot].toStack(); }
-
     @Override public ItemStack removeItem(int slot, int amount) {
         if (amount <= 0) return ItemStack.EMPTY;
         ItemResourceSlot resourceSlot = this.slots[slot];
@@ -95,20 +121,16 @@ public final class MachineItemStorageImpl implements MachineItemStorage {
         result.setCount(removed);
         return result;
     }
-
     @Override public ItemStack removeItemNoUpdate(int slot) {
         ItemResourceSlot resourceSlot = this.slots[slot];
         ItemStack result = resourceSlot.toStack();
         if (!result.isEmpty()) resourceSlot.set(null, null, 0);
         return result;
     }
-
     @Override public void setItem(int slot, ItemStack stack) { this.slots[slot].setStack(stack); }
     @Override public void setChanged() { this.markModified(); }
     @Override public boolean stillValid(Player player) { return true; }
     @Override public void clearContent() { for (ItemResourceSlot slot : this.slots) if (!slot.isEmpty()) slot.set(null, null, 0); }
 
-    private void markModified() {
-        if (this.listener != null) this.listener.run();
-    }
+    private void markModified() { if (this.listener != null) this.listener.run(); }
 }
