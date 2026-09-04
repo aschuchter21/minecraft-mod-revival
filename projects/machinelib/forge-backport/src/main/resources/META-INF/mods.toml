@@ -1,0 +1,26 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="machinelib"
+version="${file.jarVersion}"
+displayName="MachineLib"
+authors="Team Galacticraft; Forge 1.20.1 revival backport"
+description='''
+Forge 1.20.1 backport of the MachineLib foundation used by Galacticraft 5.
+'''
+
+[[dependencies.machinelib]]
+modId="forge"
+mandatory=true
+versionRange="[47.4.10,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.machinelib]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="BOTH"
