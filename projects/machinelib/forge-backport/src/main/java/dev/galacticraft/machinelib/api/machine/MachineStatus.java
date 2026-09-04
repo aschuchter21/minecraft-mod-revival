@@ -5,7 +5,9 @@
 package dev.galacticraft.machinelib.api.machine;
 
 import dev.galacticraft.machinelib.impl.machine.MachineStatusImpl;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 
 /** MachineLib 0.2-compatible status object used by Galacticraft 1.20.1. */
@@ -14,6 +16,10 @@ public interface MachineStatus {
 
     static MachineStatus create(Component name, Type type) {
         return new MachineStatusImpl(name, type);
+    }
+
+    static MachineStatus create(String key, ChatFormatting color, Type type) {
+        return create(Component.translatable(key).setStyle(Style.EMPTY.withColor(color)), type);
     }
 
     /**
