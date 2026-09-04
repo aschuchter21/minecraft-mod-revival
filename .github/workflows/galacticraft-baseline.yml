@@ -76,9 +76,14 @@ jobs:
           if-no-files-found: error
 
   recovered-official-1_20_1-fabric:
-    name: Recover official GC5 1.20.1 baseline
+    name: Recover official GC5 1.20.1 baseline + validate Forge energy slice
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout revival port repository
+        uses: actions/checkout@v4
+        with:
+          path: Revival
+
       - name: Checkout Galacticraft 1.20.1 MachineLib 0.3 baseline
         uses: actions/checkout@v4
         with:
@@ -105,6 +110,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+
+      - name: Set up Gradle 8.13 for Forge validation
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
 
       - name: Build exact MachineLib dependency
         working-directory: MachineLib
@@ -179,11 +189,64 @@ jobs:
         working-directory: Galacticraft
         run: |
           chmod +x gradlew
-          ./gradlew clean remapJar --stacktrace
+          ./gradlew clean compileJava remapJar --stacktrace
+          echo '--- Galacticraft output jars ---'
+          find build/libs -type f -name '*.jar' -printf '%p\n' | sort
+
+      - name: Build official-class support jar
+        run: |
+          jar --create --file gc-1.20.1-support.jar -C Galacticraft/build/classes/java/main .
+          test -s gc-1.20.1-support.jar
+          echo "Support jar size: $(stat -c%s gc-1.20.1-support.jar) bytes"
+
+      - name: Validate Forge energy and wire overlays
+        run: |
+          rm -rf ForgeEnergyValidation
+          cp -R Revival/projects/galacticraft/forge-skeleton ForgeEnergyValidation
+          mkdir -p ForgeEnergyValidation/libs
+          cp gc-1.20.1-support.jar ForgeEnergyValidation/libs/
+          cp -R Revival/projects/galacticraft/forge-overlays/src/main/java/. ForgeEnergyValidation/src/main/java/
+          cat >> ForgeEnergyValidation/build.gradle <<'EOF'
+
+          dependencies {
+              compileOnly files('libs/gc-1.20.1-support.jar')
+          }
+          EOF
+          echo '--- Forge overlay Java sources ---'
+          find ForgeEnergyValidation/src/main/java -type f -name '*.java' -printf '%P\n' | sort
+          gradle -p ForgeEnergyValidation clean compileJava --stacktrace
+
+      - name: Inventory remaining Fabric and MachineLib boundaries
+        if: always()
+        run: |
+          {
+            echo '=== Fabric imports by top-level API ==='
+            grep -RhoE '^import net\.fabricmc\.[^;]+' Galacticraft/src/main/java \
+              | sed -E 's/^import (net\.fabricmc\.[^.]+\.[^.]+).*/\1/' \
+              | sort | uniq -c | sort -nr || true
+            echo
+            echo '=== Reborn Energy imports ==='
+            grep -RhnE '^import team\.reborn\.energy\.' Galacticraft/src/main/java || true
+            echo
+            echo '=== MachineLib imports ==='
+            grep -RhnE '^import dev\.galacticraft\.machinelib\.' Galacticraft/src/main/java || true
+            echo
+            echo '=== Fabric files remaining after the six-class energy slice ==='
+            grep -RlE '^import (net\.fabricmc\.|team\.reborn\.energy\.)' Galacticraft/src/main/java \
+              | sed 's#^Galacticraft/src/main/java/##' | sort || true
+          } | tee port-boundaries.txt
+
+      - name: Upload port boundary inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Galacticraft-1.20.1-port-boundaries
+          path: port-boundaries.txt
+          if-no-files-found: error
 
       - name: Upload recovered Fabric baseline
         uses: actions/upload-artifact@v4
         with:
           name: Galacticraft-5-1.20.1-recovered-fabric-baseline
-          path: Galacticraft/build/libs/*.jar
+          path: Galacticraft/build/libs/**/*.jar
           if-no-files-found: error
