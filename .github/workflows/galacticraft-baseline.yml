@@ -112,7 +112,7 @@ jobs:
           GITHUB_SHA: 031a62640ce753e0c6a5eb4e8ee6d495fecb2ecf
         run: |
           chmod +x gradlew
-          ./gradlew build --stacktrace
+          ./gradlew remapJar --stacktrace
           echo '--- MachineLib jars ---'
           find build/libs -maxdepth 1 -type f -printf '%f\n' | sort
 
@@ -122,7 +122,7 @@ jobs:
           PRE_RELEASE: 'true'
         run: |
           chmod +x gradlew
-          ./gradlew :Fabric:build --stacktrace
+          ./gradlew :Fabric:remapJar --stacktrace
           echo '--- DynamicDimensions Fabric jars ---'
           find Fabric/build/libs -maxdepth 1 -type f -printf '%f\n' | sort
 
@@ -167,7 +167,7 @@ jobs:
         working-directory: Galacticraft
         run: |
           chmod +x gradlew
-          ./gradlew clean build --stacktrace
+          ./gradlew clean remapJar --stacktrace
 
       - name: Upload recovered Fabric baseline
         uses: actions/upload-artifact@v4
