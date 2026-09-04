@@ -12,6 +12,8 @@ import dev.galacticraft.machinelib.api.transfer.InputType;
 import dev.galacticraft.machinelib.api.transfer.ResourceFlow;
 import dev.galacticraft.machinelib.impl.storage.MachineItemStorageImpl;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -61,6 +63,31 @@ public interface MachineItemStorage extends Container, Iterable<ItemResourceSlot
     boolean consumeOne(int start, int len, Item resource, CompoundTag tag);
     long consume(int start, int len, Item resource, long amount);
     long consume(int start, int len, Item resource, CompoundTag tag, long amount);
+
+    /** Persist the flattened slot order; group layout is recreated by MachineType on load. */
+    default ListTag createTag() {
+        ListTag list = new ListTag();
+        for (int i = 0; i < size(); i++) {
+            ItemStack stack = getItem(i);
+            if (stack.isEmpty()) continue;
+            CompoundTag entry = new CompoundTag();
+            entry.putInt("Slot", i);
+            entry.put("Stack", stack.save(new CompoundTag()));
+            list.add(entry);
+        }
+        return list;
+    }
+
+    /** Restore into the group/slot layout created by the machine type. */
+    default void readTag(ListTag list) {
+        clearContent();
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag entry = list.getCompound(i);
+            int slot = entry.getInt("Slot");
+            if (slot < 0 || slot >= size() || !entry.contains("Stack", Tag.TAG_COMPOUND)) continue;
+            setItem(slot, ItemStack.of(entry.getCompound("Stack")));
+        }
+    }
 
     default Container getCraftingView(SlotGroupType type) {
         SlotGroup<Item, ItemStack, ItemResourceSlot> group = getGroup(type);
