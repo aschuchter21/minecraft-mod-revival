@@ -1,0 +1,49 @@
+name: MachineLib Forge 1.20.1 CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - galacticraft-1.20.1-forge-port
+    paths:
+      - '.github/workflows/machinelib-forge.yml'
+      - 'projects/machinelib/**'
+
+jobs:
+  build:
+    name: Build MachineLib Forge 1.20.1
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout revival repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Compile and build MachineLib Forge backport
+        working-directory: projects/machinelib/forge-backport
+        run: gradle clean build --stacktrace
+
+      - name: Verify Forge energy classes were packaged
+        working-directory: projects/machinelib/forge-backport
+        run: |
+          JAR=$(find build/libs -maxdepth 1 -type f -name 'MachineLib-Forge-1.20.1-*.jar' ! -name '*-sources.jar' | head -n 1)
+          test -n "$JAR"
+          jar tf "$JAR" | grep -F 'dev/galacticraft/machinelib/impl/storage/MachineEnergyStorageImpl.class'
+          jar tf "$JAR" | grep -F 'dev/galacticraft/machinelib/forge/energy/ForgeEnergyStorageAdapter.class'
+          echo "Validated: $JAR"
+
+      - name: Upload MachineLib Forge jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: MachineLib-Forge-1.20.1-energy-slice
+          path: projects/machinelib/forge-backport/build/libs/*.jar
+          if-no-files-found: error
