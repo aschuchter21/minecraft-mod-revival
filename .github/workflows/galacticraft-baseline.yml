@@ -1,0 +1,57 @@
+name: Galacticraft Baseline Probes
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - galacticraft-1.20.1-forge-port
+    paths:
+      - '.github/workflows/galacticraft-baseline.yml'
+      - 'projects/galacticraft/**'
+
+jobs:
+  official-1_20_1-fabric:
+    name: Official GC5 1.20.1 Fabric baseline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout official Galacticraft 1.20.1
+        uses: actions/checkout@v4
+        with:
+          repository: TeamGalacticraft/Galacticraft
+          ref: minecraft/1.20.1
+          path: Galacticraft
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Compile official 1.20.1 baseline
+        working-directory: Galacticraft
+        run: |
+          chmod +x gradlew
+          ./gradlew compileJava --stacktrace
+
+  community-1_21_1-neoforge:
+    name: Community GC5 1.21.1 NeoForge baseline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout community multi-loader Galacticraft
+        uses: actions/checkout@v4
+        with:
+          repository: ColinVaughn/Galacticraft-1.21.1
+          ref: main
+          path: Galacticraft
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Compile NeoForge platform baseline
+        working-directory: Galacticraft
+        run: |
+          chmod +x gradlew
+          ./gradlew :neoforge:compileJava --stacktrace
