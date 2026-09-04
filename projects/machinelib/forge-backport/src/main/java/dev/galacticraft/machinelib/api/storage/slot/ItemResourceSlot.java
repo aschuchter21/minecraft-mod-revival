@@ -135,6 +135,7 @@ public final class ItemResourceSlot {
         return extracted;
     }
 
+    public Item consumeOne() { return this.extractOne(); }
     public boolean consumeOne(Item item) { return this.consumeOne(item, null); }
     public boolean consumeOne(Item item, CompoundTag tag) { return this.consume(item, tag, 1) == 1; }
     public long consume(long amount) { return this.extract(amount); }
