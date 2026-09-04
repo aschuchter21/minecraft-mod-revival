@@ -1,0 +1,156 @@
+/*
+ * Copyright (c) 2019-2023 Team Galacticraft
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ */
+package dev.galacticraft.mod.content.block.entity.machine;
+
+import com.google.common.annotations.VisibleForTesting;
+import dev.galacticraft.machinelib.api.block.entity.MachineBlockEntity;
+import dev.galacticraft.machinelib.api.machine.MachineStatus;
+import dev.galacticraft.machinelib.api.machine.MachineStatuses;
+import dev.galacticraft.machinelib.api.storage.slot.ItemResourceSlot;
+import dev.galacticraft.mod.Constant;
+import dev.galacticraft.mod.Galacticraft;
+import dev.galacticraft.mod.content.GCMachineTypes;
+import dev.galacticraft.mod.content.block.machine.CoalGeneratorBlock;
+import dev.galacticraft.mod.machine.GCMachineStatuses;
+import dev.galacticraft.mod.machine.storage.io.GCSlotGroupTypes;
+import dev.galacticraft.mod.screen.CoalGeneratorMenu;
+import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import net.minecraft.Util;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * Forge 1.20.1 overlay for Galacticraft's coal generator.
+ * Removes Fabric transactions from energy production and resolves the historic
+ * Galacticraft/MachineLib extractOne API skew while preserving generator logic.
+ */
+public class CoalGeneratorBlockEntity extends MachineBlockEntity {
+    @VisibleForTesting
+    public static final Object2IntMap<Item> FUEL_MAP = Util.make(new Object2IntArrayMap<>(3), map -> {
+        map.defaultReturnValue(-1);
+        map.put(Items.COAL_BLOCK, 320 * 10);
+        map.put(Items.COAL, 320);
+        map.put(Items.CHARCOAL, 310);
+    });
+
+    private int fuelLength;
+    private long fuelSlotModCount = -1;
+    private int fuelTime;
+    private double heat;
+
+    public CoalGeneratorBlockEntity(BlockPos pos, BlockState state) {
+        super(GCMachineTypes.COAL_GENERATOR, pos, state);
+    }
+
+    @Override
+    protected void tickConstant(@NotNull ServerLevel world, @NotNull BlockPos pos, @NotNull BlockState state, @NotNull ProfilerFiller profiler) {
+        super.tickConstant(world, pos, state, profiler);
+        if (this.fuelLength == 0 && this.heat > 0) {
+            this.setHeat(Math.max(0, this.heat - 0.02d));
+        }
+        profiler.push("charge");
+        this.drainPowerToStack(GCSlotGroupTypes.ENERGY_TO_ITEM);
+        profiler.pop();
+    }
+
+    @Override
+    public @NotNull MachineStatus tick(@NotNull ServerLevel world, @NotNull BlockPos pos, @NotNull BlockState state, @NotNull ProfilerFiller profiler) {
+        profiler.push("generate_energy");
+        this.energyStorage().insert((long) (Galacticraft.CONFIG_MANAGER.get().coalGeneratorEnergyProductionRate() * this.heat));
+        this.trySpreadEnergy(world, state);
+        profiler.popPush("fuel_reset");
+
+        if (this.fuelLength == 0 && !this.consumeFuel()) {
+            return this.heat > 0 ? GCMachineStatuses.COOLING_DOWN : GCMachineStatuses.NO_FUEL;
+        }
+
+        profiler.popPush("fuel_tick");
+        if (this.fuelTime++ >= this.fuelLength) {
+            this.consumeFuel();
+        }
+        this.setHeat(Math.min(1, this.heat + 0.004));
+        profiler.pop();
+
+        if (this.energyStorage().isFull()) return MachineStatuses.CAPACITOR_FULL;
+        if (this.heat < 1.0) return GCMachineStatuses.WARMING_UP;
+        return GCMachineStatuses.GENERATING;
+    }
+
+    @Override
+    public void setStatus(@NotNull MachineStatus status) {
+        if (this.getStatus() != status) {
+            this.level.setBlockAndUpdate(this.worldPosition, this.getBlockState().setValue(CoalGeneratorBlock.ACTIVE, status.type().isActive()));
+        }
+        super.setStatus(status);
+    }
+
+    private boolean consumeFuel() {
+        this.fuelTime = 0;
+        this.fuelLength = 0;
+
+        ItemResourceSlot slot = this.itemStorage().getGroup(GCSlotGroupTypes.COAL).getSlot(0);
+        if (slot.getModifications() != this.fuelSlotModCount) {
+            this.fuelSlotModCount = slot.getModifications();
+            if (slot.isEmpty()) return false;
+            int time = FUEL_MAP.getInt(slot.getResource());
+            if (time != -1 && slot.extractOne() != null) {
+                this.fuelLength = time;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public int getFuelLength() { return this.fuelLength; }
+    public void setFuelLength(int fuelLength) { this.fuelLength = fuelLength; }
+    public double getHeat() { return this.heat; }
+    public void setHeat(double heat) { this.heat = heat; }
+    public int getFuelTime() { return this.fuelTime; }
+    public void setFuelTime(int value) { this.fuelTime = value; }
+
+    @Nullable
+    @Override
+    public AbstractContainerMenu createMenu(int syncId, Inventory inv, Player player) {
+        if (this.getSecurity().hasAccess(player)) return new CoalGeneratorMenu(syncId, (ServerPlayer) player, this);
+        return null;
+    }
+
+    @Override
+    public void load(CompoundTag nbt) {
+        super.load(nbt);
+        this.fuelLength = nbt.getInt(Constant.Nbt.FUEL_LENGTH);
+        this.fuelTime = nbt.getInt(Constant.Nbt.FUEL_TIME);
+        this.heat = nbt.getDouble(Constant.Nbt.HEAT);
+    }
+
+    @Override
+    public void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        tag.putInt(Constant.Nbt.FUEL_LENGTH, this.fuelLength);
+        tag.putInt(Constant.Nbt.FUEL_TIME, this.fuelTime);
+        tag.putDouble(Constant.Nbt.HEAT, this.heat);
+    }
+}
