@@ -20,6 +20,7 @@ import dev.galacticraft.machinelib.forge.capability.ForgeMachineCapabilityBridge
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.profiling.ProfilerFiller;
@@ -208,6 +209,8 @@ public abstract class MachineBlockEntity extends BlockEntity implements MenuProv
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         tag.putLong("MachineLibEnergy", this.energyStorage.getAmount());
+        tag.put("MachineLibItems", this.itemStorage.createTag());
+        tag.put("MachineLibFluids", this.fluidStorage.createTag());
         tag.putBoolean("MachineLibDisableDrops", this.disableDrops);
         tag.putByte("MachineLibRedstone", (byte) this.redstoneActivation.ordinal());
     }
@@ -216,6 +219,8 @@ public abstract class MachineBlockEntity extends BlockEntity implements MenuProv
     public void load(CompoundTag tag) {
         super.load(tag);
         if (tag.contains("MachineLibEnergy")) this.energyStorage.setEnergy(tag.getLong("MachineLibEnergy"));
+        if (tag.contains("MachineLibItems", Tag.TAG_LIST)) this.itemStorage.readTag(tag.getList("MachineLibItems", Tag.TAG_COMPOUND));
+        if (tag.contains("MachineLibFluids", Tag.TAG_LIST)) this.fluidStorage.readTag(tag.getList("MachineLibFluids", Tag.TAG_COMPOUND));
         this.disableDrops = tag.getBoolean("MachineLibDisableDrops");
         int redstone = tag.getByte("MachineLibRedstone");
         if (redstone >= 0 && redstone < RedstoneActivation.values().length)
