@@ -13,5 +13,6 @@ public final class MachineStatuses {
     public static final MachineStatus CAPACITOR_FULL = MachineStatus.create("status.machinelib.capacitor_full", ChatFormatting.GOLD, MachineStatus.Type.OUTPUT_FULL);
     public static final MachineStatus IDLE = MachineStatus.create("status.machinelib.idle", ChatFormatting.GOLD, MachineStatus.Type.MISSING_RESOURCE);
     public static final MachineStatus ACTIVE = MachineStatus.create("status.machinelib.active", ChatFormatting.GREEN, MachineStatus.Type.WORKING);
+    public static final MachineStatus OFF = MachineStatus.create("status.machinelib.off", ChatFormatting.RED, MachineStatus.Type.OTHER);
     private MachineStatuses() {}
 }
