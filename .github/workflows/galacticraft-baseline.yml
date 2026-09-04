@@ -63,7 +63,6 @@ jobs:
       - name: Build Forge DynamicDimensions
         working-directory: DynamicDimensions
         env:
-          GITHUB_RUN_NUMBER: '26'
           PRE_RELEASE: 'true'
         run: |
           chmod +x gradlew
@@ -107,26 +106,44 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Rebuild and install exact MachineLib dependency
+      - name: Build exact MachineLib dependency
         working-directory: MachineLib
         env:
           GITHUB_SHA: 031a62640ce753e0c6a5eb4e8ee6d495fecb2ecf
         run: |
           chmod +x gradlew
-          ./gradlew publishToMavenLocal --stacktrace
+          ./gradlew build --stacktrace
+          echo '--- MachineLib jars ---'
+          find build/libs -maxdepth 1 -type f -printf '%f\n' | sort
 
-      - name: Rebuild and install DynamicDimensions compatibility dependency
+      - name: Build DynamicDimensions Fabric dependency
         working-directory: DynamicDimensions
         env:
-          GITHUB_RUN_NUMBER: '26'
           PRE_RELEASE: 'true'
         run: |
           chmod +x gradlew
-          ./gradlew :Fabric:publishToMavenLocal --stacktrace
+          ./gradlew :Fabric:build --stacktrace
+          echo '--- DynamicDimensions Fabric jars ---'
+          find Fabric/build/libs -maxdepth 1 -type f -printf '%f\n' | sort
 
-      - name: Prefer locally recovered Galacticraft dependencies
+      - name: Wire recovered jars directly into Galacticraft
         working-directory: Galacticraft
         run: |
+          MACHINE_JAR=$(find ../MachineLib/build/libs -maxdepth 1 -type f -name 'MachineLib-*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' ! -name '*-dev.jar' | head -n 1)
+          DD_JAR=$(find ../DynamicDimensions/Fabric/build/libs -maxdepth 1 -type f -name 'dynamicdimensions-fabric-*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' ! -name '*-dev.jar' | head -n 1)
+
+          test -n "$MACHINE_JAR"
+          test -n "$DD_JAR"
+
+          MACHINE_VERSION=$(basename "$MACHINE_JAR" .jar | sed 's/^MachineLib-//')
+          DD_VERSION=$(basename "$DD_JAR" .jar | sed 's/^dynamicdimensions-fabric-//')
+
+          echo "Recovered MachineLib: $MACHINE_JAR -> $MACHINE_VERSION"
+          echo "Recovered DynamicDimensions: $DD_JAR -> $DD_VERSION"
+
+          sed -i "s/^machinelib.version=.*/machinelib.version=${MACHINE_VERSION}/" gradle.properties
+          sed -i "s/^dynamicdimensions.version=.*/dynamicdimensions.version=${DD_VERSION}/" gradle.properties
+
           python3 - <<'PY'
           from pathlib import Path
           p = Path('build.gradle.kts')
@@ -136,10 +153,15 @@ jobs:
           if idx < 0:
               raise SystemExit('Could not find repositories block')
           insert_at = idx + len(marker)
-          s = s[:insert_at] + '\n    mavenLocal()' + s[insert_at:]
+          local_repo = '''\n    flatDir {\n        dirs("../MachineLib/build/libs", "../DynamicDimensions/Fabric/build/libs")\n    }'''
+          s = s[:insert_at] + local_repo + s[insert_at:]
           p.write_text(s)
           PY
+
+          echo '--- Effective recovered dependency versions ---'
           grep -E '^(dynamicdimensions|machinelib)\.version=' gradle.properties
+          echo '--- First repositories block ---'
+          sed -n '/repositories {/,/^}/p' build.gradle.kts | head -n 20
 
       - name: Compile recovered official Galacticraft 1.20.1
         working-directory: Galacticraft
