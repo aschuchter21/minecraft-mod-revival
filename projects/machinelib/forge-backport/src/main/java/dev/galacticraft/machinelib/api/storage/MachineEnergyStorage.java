@@ -1,15 +1,6 @@
 /*
  * Copyright (c) 2021-2026 Team Galacticraft
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * MIT License
  */
 package dev.galacticraft.machinelib.api.storage;
 
@@ -21,12 +12,23 @@ import net.minecraftforge.energy.IEnergyStorage;
 
 /**
  * MachineLib's long-valued internal energy store with a native Forge Energy view.
- * Internal Galacticraft/MachineLib code remains long-based; Forge's int boundary
- * is handled only by the exposed capability adapter.
+ * Includes the 0.2 `of(...)` factories used by Galacticraft 1.20.1.
  */
 public interface MachineEnergyStorage {
     static MachineEnergyStorage create(long capacity, long maxInput, long maxOutput, boolean insert, boolean extract) {
         return new MachineEnergyStorageImpl(capacity, maxInput, maxOutput, insert, extract);
+    }
+
+    static MachineEnergyStorage of(long capacity, long insertion, long extraction,
+                                   boolean externalInsertion, boolean externalExtraction) {
+        if (capacity == 0 || insertion == 0 || extraction == 0) return empty();
+        if (capacity < 0 || insertion < 0 || extraction < 0) throw new IllegalArgumentException("negative energy value");
+        return create(capacity, insertion, extraction, externalInsertion, externalExtraction);
+    }
+
+    static MachineEnergyStorage of(long capacity, long ioRate,
+                                   boolean externalInsertion, boolean externalExtraction) {
+        return of(capacity, ioRate, ioRate, externalInsertion, externalExtraction);
     }
 
     static MachineEnergyStorage empty() {
@@ -53,23 +55,9 @@ public interface MachineEnergyStorage {
     void setListener(Runnable listener);
     IEnergyStorage getExposedStorage(ResourceFlow flow);
 
-    default LongTag createTag() {
-        return LongTag.valueOf(getAmount());
-    }
-
-    default void readTag(LongTag tag) {
-        setEnergy(tag.getAsLong());
-    }
-
-    default void writePacket(FriendlyByteBuf buf) {
-        buf.writeLong(getAmount());
-    }
-
-    default void readPacket(FriendlyByteBuf buf) {
-        setEnergy(buf.readLong());
-    }
-
-    default long getModifications() {
-        return getAmount();
-    }
+    default LongTag createTag() { return LongTag.valueOf(getAmount()); }
+    default void readTag(LongTag tag) { setEnergy(tag.getAsLong()); }
+    default void writePacket(FriendlyByteBuf buf) { buf.writeLong(getAmount()); }
+    default void readPacket(FriendlyByteBuf buf) { setEnergy(buf.readLong()); }
+    default long getModifications() { return getAmount(); }
 }
