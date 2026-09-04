@@ -1,0 +1,26 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="galacticraft"
+version="5.0.0-prealpha-forge-port.0"
+displayName="Galacticraft"
+authors="Team Galacticraft; Forge 1.20.1 revival work"
+description='''
+Experimental Forge 1.20.1 port scaffold for Galacticraft 5.
+'''
+
+[[dependencies.galacticraft]]
+modId="forge"
+mandatory=true
+versionRange="[47.4.10,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.galacticraft]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="BOTH"
