@@ -32,18 +32,29 @@ jobs:
         working-directory: projects/machinelib/forge-backport
         run: gradle clean build --stacktrace
 
-      - name: Verify Forge energy classes were packaged
+      - name: Verify Forge resource foundation was packaged
         working-directory: projects/machinelib/forge-backport
         run: |
           JAR=$(find build/libs -maxdepth 1 -type f -name 'MachineLib-Forge-1.20.1-*.jar' ! -name '*-sources.jar' | head -n 1)
           test -n "$JAR"
-          jar tf "$JAR" | grep -F 'dev/galacticraft/machinelib/impl/storage/MachineEnergyStorageImpl.class'
-          jar tf "$JAR" | grep -F 'dev/galacticraft/machinelib/forge/energy/ForgeEnergyStorageAdapter.class'
+          for CLASS in \
+            dev/galacticraft/machinelib/impl/storage/MachineEnergyStorageImpl.class \
+            dev/galacticraft/machinelib/forge/energy/ForgeEnergyStorageAdapter.class \
+            dev/galacticraft/machinelib/api/storage/slot/ItemResourceSlot.class \
+            dev/galacticraft/machinelib/api/storage/slot/FluidResourceSlot.class \
+            dev/galacticraft/machinelib/impl/storage/MachineItemStorageImpl.class \
+            dev/galacticraft/machinelib/impl/storage/MachineFluidStorageImpl.class \
+            dev/galacticraft/machinelib/forge/item/ForgeItemStorageAdapter.class \
+            dev/galacticraft/machinelib/forge/fluid/ForgeFluidStorageAdapter.class \
+            dev/galacticraft/machinelib/forge/capability/ForgeMachineCapabilityBridge.class
+          do
+            jar tf "$JAR" | grep -F "$CLASS"
+          done
           echo "Validated: $JAR"
 
       - name: Upload MachineLib Forge jar
         uses: actions/upload-artifact@v4
         with:
-          name: MachineLib-Forge-1.20.1-energy-slice
+          name: MachineLib-Forge-1.20.1-resource-foundation
           path: projects/machinelib/forge-backport/build/libs/*.jar
           if-no-files-found: error
