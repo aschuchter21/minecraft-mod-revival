@@ -8,21 +8,21 @@ import com.mojang.datafixers.util.Pair;
 import dev.galacticraft.machinelib.api.filter.ResourceFilter;
 import dev.galacticraft.machinelib.api.filter.ResourceFilters;
 import dev.galacticraft.machinelib.api.storage.slot.display.ItemSlotDisplay;
-import dev.galacticraft.machinelib.api.transfer.InputType;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Loader-neutral MachineLib 0.3 item slot.
- * Internal machine code can keep using the original resource/amount API while
- * Forge exposure is handled separately by ForgeItemStorageAdapter.
+ * Loader-neutral item slot with the MachineLib 0.2 builder/filter surface used
+ * by Galacticraft 1.20.1. A slot group assigns the historical InputType after
+ * construction; Forge exposure reads that mapped internal policy.
  */
 public final class ItemResourceSlot {
-    private final InputType inputType;
+    private dev.galacticraft.machinelib.api.transfer.InputType inputType;
     private final ItemSlotDisplay display;
     private final ResourceFilter<Item> filter;
+    private final ResourceFilter<Item> strictFilter;
     private final int capacity;
 
     private Item resource;
@@ -31,27 +31,55 @@ public final class ItemResourceSlot {
     private long modifications;
     private Runnable listener;
 
-    private ItemResourceSlot(InputType inputType, ItemSlotDisplay display, ResourceFilter<Item> filter, int capacity) {
+    private ItemResourceSlot(dev.galacticraft.machinelib.api.transfer.InputType inputType,
+                             ItemSlotDisplay display,
+                             ResourceFilter<Item> filter,
+                             ResourceFilter<Item> strictFilter,
+                             int capacity) {
         if (capacity <= 0 || capacity > 64) throw new IllegalArgumentException("capacity must be 1..64");
         this.inputType = inputType;
         this.display = display;
         this.filter = filter;
+        this.strictFilter = strictFilter;
         this.capacity = capacity;
     }
 
-    public static Builder builder(InputType inputType) {
+    /** Historical MachineLib 0.2 builder used by Galacticraft 1.20.1. */
+    public static Builder builder() {
+        return new Builder(dev.galacticraft.machinelib.api.transfer.InputType.TRANSFER);
+    }
+
+    /** Compatibility builder retained for the early Forge-backport storage tests. */
+    public static Builder builder(dev.galacticraft.machinelib.api.transfer.InputType inputType) {
         return new Builder(inputType);
     }
 
-    public static ItemResourceSlot create(InputType inputType, ItemSlotDisplay display, ResourceFilter<Item> filter) {
-        return create(inputType, display, filter, 64);
+    public static ItemResourceSlot create(ItemSlotDisplay display, ResourceFilter<Item> filter) {
+        return create(display, filter, filter, 64);
     }
 
-    public static ItemResourceSlot create(InputType inputType, ItemSlotDisplay display, ResourceFilter<Item> filter, int capacity) {
-        return new ItemResourceSlot(inputType, display, filter, capacity);
+    public static ItemResourceSlot create(ItemSlotDisplay display, ResourceFilter<Item> filter, ResourceFilter<Item> strictFilter) {
+        return create(display, filter, strictFilter, 64);
     }
 
-    public InputType inputType() { return this.inputType; }
+    public static ItemResourceSlot create(ItemSlotDisplay display, ResourceFilter<Item> filter,
+                                          ResourceFilter<Item> strictFilter, int capacity) {
+        return new ItemResourceSlot(dev.galacticraft.machinelib.api.transfer.InputType.TRANSFER,
+                display, filter, strictFilter, capacity);
+    }
+
+    public static ItemResourceSlot create(dev.galacticraft.machinelib.api.transfer.InputType inputType,
+                                          ItemSlotDisplay display, ResourceFilter<Item> filter, int capacity) {
+        return new ItemResourceSlot(inputType, display, filter, filter, capacity);
+    }
+
+    public dev.galacticraft.machinelib.api.transfer.InputType inputType() { return this.inputType; }
+
+    /** Called by MachineItemStorage when the slot is attached to a 0.2 SlotGroupType. */
+    public void assignInputType(dev.galacticraft.machinelib.impl.storage.slot.InputType inputType) {
+        this.inputType = inputType.toInternal();
+    }
+
     public Item getResource() { return this.resource; }
     public long getAmount() { return this.amount; }
     public CompoundTag getTag() { return this.tag; }
@@ -60,16 +88,15 @@ public final class ItemResourceSlot {
     public long getRealCapacity() { return this.capacity; }
     public long getCapacityFor(Item item) { return Math.min(this.capacity, item.getMaxStackSize()); }
     public ResourceFilter<Item> getFilter() { return this.filter; }
+    public ResourceFilter<Item> getStrictFilter() { return this.strictFilter; }
     public ItemSlotDisplay getDisplay() { return this.display; }
     public long getModifications() { return this.modifications; }
     public boolean isEmpty() { return this.resource == null || this.amount <= 0; }
     public boolean isFull() { return !this.isEmpty() && this.amount >= this.getCapacityFor(this.resource); }
-
     public void setListener(Runnable listener) { this.listener = listener; }
 
     public boolean contains(Item item) { return this.contains(item, null, false); }
     public boolean contains(Item item, CompoundTag tag) { return this.contains(item, tag, true); }
-
     private boolean contains(Item item, CompoundTag tag, boolean matchTag) {
         return !this.isEmpty() && this.resource == item && (!matchTag || ResourceFilters.tagsEqual(this.tag, tag));
     }
@@ -78,18 +105,15 @@ public final class ItemResourceSlot {
     public boolean canInsert(Item item, CompoundTag tag) { return this.canInsert(item, tag, 1, true); }
     public boolean canInsert(Item item, long amount) { return this.canInsert(item, null, amount, false); }
     public boolean canInsert(Item item, CompoundTag tag, long amount) { return this.canInsert(item, tag, amount, true); }
-
     private boolean canInsert(Item item, CompoundTag tag, long requested, boolean matchTag) {
         if (item == null || requested < 0 || !this.filter.test(item, tag)) return false;
         if (requested == 0) return true;
         if (!this.isEmpty() && (this.resource != item || (matchTag && !ResourceFilters.tagsEqual(this.tag, tag)))) return false;
-        long cap = this.getCapacityFor(item);
-        return requested <= cap - this.amount;
+        return requested <= this.getCapacityFor(item) - this.amount;
     }
 
     public long tryInsert(Item item, long amount) { return this.tryInsert(item, null, amount, false); }
     public long tryInsert(Item item, CompoundTag tag, long amount) { return this.tryInsert(item, tag, amount, true); }
-
     private long tryInsert(Item item, CompoundTag tag, long requested, boolean matchTag) {
         if (item == null || requested <= 0 || !this.filter.test(item, tag)) return 0;
         if (!this.isEmpty() && (this.resource != item || (matchTag && !ResourceFilters.tagsEqual(this.tag, tag)))) return 0;
@@ -139,10 +163,8 @@ public final class ItemResourceSlot {
     public boolean consumeOne(Item item) { return this.consumeOne(item, null); }
     public boolean consumeOne(Item item, CompoundTag tag) { return this.consume(item, tag, 1) == 1; }
     public long consume(long amount) { return this.extract(amount); }
-    public long consume(Item item, long amount) { return this.tryExtract(item, amount) > 0 ? this.extract(Math.min(amount, this.amount)) : 0; }
-    public long consume(Item item, CompoundTag tag, long amount) {
-        return this.contains(item, tag) ? this.extract(amount) : 0;
-    }
+    public long consume(Item item, long amount) { return this.contains(item) ? this.extract(amount) : 0; }
+    public long consume(Item item, CompoundTag tag, long amount) { return this.contains(item, tag) ? this.extract(amount) : 0; }
 
     public void set(Item item, long amount) { this.set(item, null, amount); }
     public void set(Item item, CompoundTag tag, long amount) {
@@ -187,26 +209,30 @@ public final class ItemResourceSlot {
     }
 
     public static final class Builder {
-        private final InputType inputType;
-        private boolean hidden;
+        private final dev.galacticraft.machinelib.api.transfer.InputType initialInputType;
         private int x;
         private int y;
         private Pair<ResourceLocation, ResourceLocation> icon;
         private ResourceFilter<Item> filter = ResourceFilters.any();
+        private ResourceFilter<Item> strictFilter;
         private int capacity = 64;
 
-        private Builder(InputType inputType) { this.inputType = inputType; }
+        private Builder(dev.galacticraft.machinelib.api.transfer.InputType initialInputType) {
+            this.initialInputType = initialInputType;
+        }
+
         public Builder pos(int x, int y) { this.x = x; this.y = y; return this; }
-        public Builder hidden() { this.hidden = true; return this; }
-        public Builder x(int x) { if (this.hidden) throw new UnsupportedOperationException("hidden"); this.x = x; return this; }
-        public Builder y(int y) { if (this.hidden) throw new UnsupportedOperationException("hidden"); this.y = y; return this; }
-        public Builder icon(Pair<ResourceLocation, ResourceLocation> icon) { if (this.hidden) throw new UnsupportedOperationException("hidden"); this.icon = icon; return this; }
+        public Builder x(int x) { this.x = x; return this; }
+        public Builder y(int y) { this.y = y; return this; }
+        public Builder icon(Pair<ResourceLocation, ResourceLocation> icon) { this.icon = icon; return this; }
         public Builder filter(ResourceFilter<Item> filter) { this.filter = filter; return this; }
+        public Builder strictFilter(ResourceFilter<Item> strictFilter) { this.strictFilter = strictFilter; return this; }
         public Builder capacity(int capacity) { this.capacity = capacity; return this; }
+
         public ItemResourceSlot build() {
-            return ItemResourceSlot.create(this.inputType,
-                    this.hidden ? null : ItemSlotDisplay.create(this.x, this.y, this.icon),
-                    this.filter, this.capacity);
+            ResourceFilter<Item> strict = this.strictFilter == null ? this.filter : this.strictFilter;
+            return new ItemResourceSlot(this.initialInputType,
+                    ItemSlotDisplay.create(this.x, this.y, this.icon), this.filter, strict, this.capacity);
         }
     }
 }
