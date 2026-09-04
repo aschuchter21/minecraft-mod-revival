@@ -148,6 +148,7 @@ jobs:
           from pathlib import Path
           p = Path('build.gradle.kts')
           s = p.read_text()
+
           marker = 'repositories {'
           idx = s.find(marker)
           if idx < 0:
@@ -155,13 +156,24 @@ jobs:
           insert_at = idx + len(marker)
           local_repo = '''\n    flatDir {\n        dirs("../MachineLib/build/libs", "../DynamicDimensions/Fabric/build/libs")\n    }'''
           s = s[:insert_at] + local_repo + s[insert_at:]
+
+          # MachineLib's original Maven POM supplied this transitively. flatDir has no
+          # POM metadata, so restore the exact dependency explicitly.
+          dep_marker = 'dependencies {'
+          dep_idx = s.find(dep_marker)
+          if dep_idx < 0:
+              raise SystemExit('Could not find dependencies block')
+          dep_insert = dep_idx + len(dep_marker)
+          energy_dep = '''\n    modImplementation("teamreborn:energy:3.0.0") {\n        isTransitive = false\n    }'''
+          s = s[:dep_insert] + energy_dep + s[dep_insert:]
+
           p.write_text(s)
           PY
 
           echo '--- Effective recovered dependency versions ---'
           grep -E '^(dynamicdimensions|machinelib)\.version=' gradle.properties
-          echo '--- First repositories block ---'
-          sed -n '/repositories {/,/^}/p' build.gradle.kts | head -n 20
+          echo '--- Restored Reborn Energy dependency ---'
+          grep -n -A3 'teamreborn:energy' build.gradle.kts
 
       - name: Compile recovered official Galacticraft 1.20.1
         working-directory: Galacticraft
