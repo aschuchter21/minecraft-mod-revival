@@ -55,3 +55,25 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew :neoforge:compileJava --stacktrace
+
+  forge-1_20_1-skeleton:
+    name: Forge 47.4.10 port skeleton
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout revival repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Build Forge skeleton
+        working-directory: projects/galacticraft/forge-skeleton
+        run: gradle build --stacktrace
