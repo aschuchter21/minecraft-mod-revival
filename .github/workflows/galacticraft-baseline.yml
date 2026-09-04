@@ -1,4 +1,4 @@
-name: Galacticraft Baseline Probes
+name: Galacticraft Port CI
 
 on:
   workflow_dispatch:
@@ -10,52 +10,6 @@ on:
       - 'projects/galacticraft/**'
 
 jobs:
-  official-1_20_1-fabric:
-    name: Official GC5 1.20.1 Fabric baseline
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout official Galacticraft 1.20.1
-        uses: actions/checkout@v4
-        with:
-          repository: TeamGalacticraft/Galacticraft
-          ref: minecraft/1.20.1
-          path: Galacticraft
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Compile official 1.20.1 baseline
-        working-directory: Galacticraft
-        run: |
-          chmod +x gradlew
-          ./gradlew compileJava --stacktrace
-
-  community-1_21_1-neoforge:
-    name: Community GC5 1.21.1 NeoForge baseline
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout community multi-loader Galacticraft
-        uses: actions/checkout@v4
-        with:
-          repository: ColinVaughn/Galacticraft-1.21.1
-          ref: main
-          path: Galacticraft
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-
-      - name: Compile NeoForge platform baseline
-        working-directory: Galacticraft
-        run: |
-          chmod +x gradlew
-          ./gradlew :neoforge:compileJava --stacktrace
-
   forge-1_20_1-skeleton:
     name: Forge 47.4.10 port skeleton
     runs-on: ubuntu-latest
@@ -77,3 +31,125 @@ jobs:
       - name: Build Forge skeleton
         working-directory: projects/galacticraft/forge-skeleton
         run: gradle build --stacktrace
+
+      - name: Upload Forge skeleton
+        uses: actions/upload-artifact@v4
+        with:
+          name: Galacticraft-Forge-1.20.1-skeleton
+          path: projects/galacticraft/forge-skeleton/build/libs/*.jar
+          if-no-files-found: error
+
+  dynamicdimensions-forge-1_20_1:
+    name: Recover DynamicDimensions Forge 1.20.1
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout DynamicDimensions 1.20 source
+        uses: actions/checkout@v4
+        with:
+          repository: TeamGalacticraft/DynamicDimensions
+          ref: minecraft/1.20
+          path: DynamicDimensions
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Target Forge 47.4.10
+        working-directory: DynamicDimensions
+        run: sed -i 's/^forge.version=.*/forge.version=47.4.10/' gradle.properties
+
+      - name: Build Forge DynamicDimensions
+        working-directory: DynamicDimensions
+        env:
+          GITHUB_RUN_NUMBER: '26'
+          PRE_RELEASE: 'true'
+        run: |
+          chmod +x gradlew
+          ./gradlew :Forge:build --stacktrace
+
+      - name: Upload Forge DynamicDimensions
+        uses: actions/upload-artifact@v4
+        with:
+          name: DynamicDimensions-Forge-1.20.1
+          path: DynamicDimensions/Forge/build/libs/*.jar
+          if-no-files-found: error
+
+  recovered-official-1_20_1-fabric:
+    name: Recover official GC5 1.20.1 baseline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Galacticraft 1.20.1 MachineLib 0.3 baseline
+        uses: actions/checkout@v4
+        with:
+          repository: TeamGalacticraft/Galacticraft
+          ref: minecraft/1.20.1+machinelib-0.3
+          path: Galacticraft
+
+      - name: Checkout exact MachineLib 0.3 dependency
+        uses: actions/checkout@v4
+        with:
+          repository: TeamGalacticraft/MachineLib
+          ref: 031a62640ce753e0c6a5eb4e8ee6d495fecb2ecf
+          path: MachineLib
+
+      - name: Checkout DynamicDimensions 1.20 source
+        uses: actions/checkout@v4
+        with:
+          repository: TeamGalacticraft/DynamicDimensions
+          ref: minecraft/1.20
+          path: DynamicDimensions
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Rebuild and install exact MachineLib dependency
+        working-directory: MachineLib
+        env:
+          GITHUB_SHA: 031a62640ce753e0c6a5eb4e8ee6d495fecb2ecf
+        run: |
+          chmod +x gradlew
+          ./gradlew publishToMavenLocal --stacktrace
+
+      - name: Rebuild and install DynamicDimensions compatibility dependency
+        working-directory: DynamicDimensions
+        env:
+          GITHUB_RUN_NUMBER: '26'
+          PRE_RELEASE: 'true'
+        run: |
+          chmod +x gradlew
+          ./gradlew :Fabric:publishToMavenLocal --stacktrace
+
+      - name: Prefer locally recovered Galacticraft dependencies
+        working-directory: Galacticraft
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('build.gradle.kts')
+          s = p.read_text()
+          marker = 'repositories {'
+          idx = s.find(marker)
+          if idx < 0:
+              raise SystemExit('Could not find repositories block')
+          insert_at = idx + len(marker)
+          s = s[:insert_at] + '\n    mavenLocal()' + s[insert_at:]
+          p.write_text(s)
+          PY
+          grep -E '^(dynamicdimensions|machinelib)\.version=' gradle.properties
+
+      - name: Compile recovered official Galacticraft 1.20.1
+        working-directory: Galacticraft
+        run: |
+          chmod +x gradlew
+          ./gradlew clean build --stacktrace
+
+      - name: Upload recovered Fabric baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: Galacticraft-5-1.20.1-recovered-fabric-baseline
+          path: Galacticraft/build/libs/*.jar
+          if-no-files-found: error
