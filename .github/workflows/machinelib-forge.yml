@@ -53,6 +53,7 @@ jobs:
             dev/galacticraft/machinelib/api/machine/MachineType.class \
             dev/galacticraft/machinelib/api/machine/MachineState.class \
             dev/galacticraft/machinelib/impl/machine/MachineStateImpl.class \
+            dev/galacticraft/machinelib/api/block/MachineBlock.class \
             dev/galacticraft/machinelib/api/block/entity/MachineBlockEntity.class \
             dev/galacticraft/machinelib/api/block/entity/RecipeMachineBlockEntity.class \
             dev/galacticraft/machinelib/api/block/entity/BasicRecipeMachineBlockEntity.class \
