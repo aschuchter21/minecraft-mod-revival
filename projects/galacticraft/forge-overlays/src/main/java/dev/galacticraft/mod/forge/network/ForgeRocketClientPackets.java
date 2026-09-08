@@ -7,7 +7,7 @@ package dev.galacticraft.mod.forge.network;
 import dev.galacticraft.api.registry.AddonRegistries;
 import dev.galacticraft.api.rocket.RocketData;
 import dev.galacticraft.api.universe.celestialbody.CelestialBody;
-import dev.galacticraft.mod.client.gui.screen.ingame.CelestialSelectionScreen;
+import dev.galacticraft.mod.client.gui.screen.ingame.ForgeCelestialSelectionScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -31,7 +31,7 @@ public final class ForgeRocketClientPackets {
                     .value();
         }
 
-        minecraft.setScreen(new CelestialSelectionScreen(
+        minecraft.setScreen(new ForgeCelestialSelectionScreen(
                 false,
                 RocketData.fromNbt(message.rocketData()),
                 true,
