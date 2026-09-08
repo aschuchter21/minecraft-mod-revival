@@ -20,11 +20,17 @@ import dev.galacticraft.api.universe.celestialbody.CelestialBody;
 import dev.galacticraft.api.universe.celestialbody.landable.teleporter.CelestialTeleporter;
 import dev.galacticraft.api.universe.galaxy.Galaxy;
 import dev.galacticraft.impl.universe.BuiltinObjects;
+import dev.galacticraft.mod.Constant;
+import dev.galacticraft.mod.content.entity.data.GCEntityDataSerializers;
+import dev.galacticraft.mod.data.gen.SatelliteChunkGenerator;
 import dev.galacticraft.mod.forge.network.ForgeRocketNetworking;
+import net.minecraft.core.registries.Registries;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DataPackRegistryEvent;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegisterEvent;
 import org.slf4j.Logger;
 
 /** Forge 47.4.10 bootstrap for the recovered Galacticraft 1.20.1 runtime. */
@@ -41,6 +47,7 @@ public final class GalacticraftForgeBootstrap {
         BuiltinObjects.register();
         BuiltInRocketRegistries.initialize();
         modBus.addListener(this::registerDataPackRegistries);
+        modBus.addListener(this::registerForgeAndVanillaEntries);
 
         ForgeRocketNetworking.register();
         LOGGER.info("Galacticraft Forge 1.20.1 runtime bootstrap loaded");
@@ -71,5 +78,22 @@ public final class GalacticraftForgeBootstrap {
                 RocketUpgrade.DIRECT_CODEC, RocketUpgrade.DIRECT_CODEC);
         event.dataPackRegistry(RocketRegistries.ROCKET_PART_RECIPE,
                 RocketPartRecipe.DIRECT_CODEC, RocketPartRecipe.DIRECT_CODEC);
+    }
+
+    /**
+     * Loader-native replacements for the direct vanilla registrations performed by
+     * the Fabric API initializer. Forge's serializer registry keeps modded entity
+     * data IDs synchronized between logical sides.
+     */
+    private void registerForgeAndVanillaEntries(RegisterEvent event) {
+        event.register(Registries.CHUNK_GENERATOR, Constant.id("satellite"),
+                () -> SatelliteChunkGenerator.CODEC);
+
+        event.register(ForgeRegistries.Keys.ENTITY_DATA_SERIALIZERS,
+                Constant.id("launch_stage"), () -> GCEntityDataSerializers.LAUNCH_STAGE);
+        event.register(ForgeRegistries.Keys.ENTITY_DATA_SERIALIZERS,
+                Constant.id("rocket_part"), () -> GCEntityDataSerializers.ROCKET_PART);
+        event.register(ForgeRegistries.Keys.ENTITY_DATA_SERIALIZERS,
+                Constant.id("rocket_upgrades"), () -> GCEntityDataSerializers.ROCKET_UPGRADES);
     }
 }
