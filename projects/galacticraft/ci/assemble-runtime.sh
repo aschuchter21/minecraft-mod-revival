@@ -9,6 +9,7 @@ REVIVAL_ROOT="${1:-Revival}"
 UPSTREAM_GC="${2:-Galacticraft}"
 SUPPORT_JAR="${3:-gc-1.20.1-support.jar}"
 OUT_DIR="${4:-ForgeRuntimeValidation}"
+OVERLAY_SRC="$REVIVAL_ROOT/projects/galacticraft/forge-overlays/src/main/java"
 
 MACHINE_BUILD="$REVIVAL_ROOT/projects/machinelib/forge-backport/build/libs"
 MACHINE_DEV_JAR="$MACHINE_BUILD/MachineLib-Forge-1.20.1-dev.jar"
@@ -19,6 +20,7 @@ MACHINE_RUNTIME_JAR=$(find "$MACHINE_BUILD" -maxdepth 1 -type f \
 [[ -s "$SUPPORT_JAR" ]]
 [[ -s "$MACHINE_DEV_JAR" ]]
 [[ -n "$MACHINE_RUNTIME_JAR" && -s "$MACHINE_RUNTIME_JAR" ]]
+[[ -d "$OVERLAY_SRC" ]]
 
 rm -rf "$OUT_DIR"
 cp -R "$REVIVAL_ROOT/projects/galacticraft/forge-skeleton" "$OUT_DIR"
@@ -28,18 +30,63 @@ cp "$SUPPORT_JAR" "$OUT_DIR/libs/gc-1.20.1-support.jar"
 cp "$MACHINE_DEV_JAR" "$OUT_DIR/libs/machinelib-forge-dev.jar"
 cp "$MACHINE_RUNTIME_JAR" "$OUT_DIR/libs/machinelib-forge-runtime.jar"
 
-# Overlay source is compiled normally and therefore wins over same-named classes
-# recovered from upstream.
-cp -R "$REVIVAL_ROOT/projects/galacticraft/forge-overlays/src/main/java/." \
-  "$OUT_DIR/src/main/java/"
+# Forge-port sources are compiled as the primary implementation.
+cp -R "$OVERLAY_SRC/." "$OUT_DIR/src/main/java/"
 
-# The support jar contains only upstream compiled classes. Add them as an extra
-# SourceSet output directory so both runServer and the reobfuscated production jar
-# see them, without asking ModDevGradle to remap an already-named support jar.
+# The support jar contains the recovered upstream implementation. Extract it so
+# loader-neutral classes remain available to the Forge runtime.
 (
   cd "$OUT_DIR/upstream-classes"
   jar xf ../libs/gc-1.20.1-support.jar
 )
+
+# IMPORTANT: never leave two definitions of a source-ported class on the runtime
+# classpath. Gradle SourceSet output ordering can place an extra output directory
+# ahead of build/classes/java/main, which caused Forge to load the recovered
+# Fabric BuiltInAddonRegistries instead of our Forge replacement. Remove every
+# recovered class that has a Forge overlay source, including compiler-generated
+# nested/anonymous classes. The freshly compiled overlay is then the sole runtime
+# definition and cannot lose a classpath-precedence race.
+REMOVED_OVERLAY_CLASSES=0
+while IFS= read -r source; do
+  rel="${source#"$OVERLAY_SRC/"}"
+  stem="${rel%.java}"
+  class_file="$OUT_DIR/upstream-classes/$stem.class"
+  class_dir=$(dirname "$class_file")
+  class_base=$(basename "$stem")
+
+  if [[ -f "$class_file" ]]; then
+    rm -f "$class_file"
+    REMOVED_OVERLAY_CLASSES=$((REMOVED_OVERLAY_CLASSES + 1))
+  fi
+
+  if [[ -d "$class_dir" ]]; then
+    while IFS= read -r nested; do
+      rm -f "$nested"
+      REMOVED_OVERLAY_CLASSES=$((REMOVED_OVERLAY_CLASSES + 1))
+    done < <(find "$class_dir" -maxdepth 1 -type f -name "${class_base}\$*.class" -print)
+  fi
+done < <(find "$OVERLAY_SRC" -type f -name '*.java' -print | sort)
+
+echo "Removed $REMOVED_OVERLAY_CLASSES recovered class files superseded by Forge overlays."
+
+# Fail assembly immediately if any recovered duplicate survives the pruning pass.
+while IFS= read -r source; do
+  rel="${source#"$OVERLAY_SRC/"}"
+  stem="${rel%.java}"
+  class_file="$OUT_DIR/upstream-classes/$stem.class"
+  class_dir=$(dirname "$class_file")
+  class_base=$(basename "$stem")
+
+  if [[ -f "$class_file" ]]; then
+    echo "Recovered duplicate survived for Forge overlay: $rel" >&2
+    exit 1
+  fi
+  if [[ -d "$class_dir" ]] && find "$class_dir" -maxdepth 1 -type f -name "${class_base}\$*.class" -print -quit | grep -q .; then
+    echo "Recovered nested duplicate survived for Forge overlay: $rel" >&2
+    exit 1
+  fi
+done < <(find "$OVERLAY_SRC" -type f -name '*.java' -print | sort)
 
 # Bring over only loader-neutral game resources for the first runtime test.
 # Fabric metadata, access widener and Fabric mixin configs are deliberately not
@@ -62,8 +109,6 @@ dependencies {
 }
 
 tasks.named('jar') {
-    // Compiled Forge overlays are part of the normal SourceSet output first;
-    // duplicate upstream classes from upstream-classes are ignored afterward.
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 GRADLE
@@ -93,6 +138,7 @@ for entry in \
   'META-INF/mods.toml' \
   'META-INF/accesstransformer.cfg' \
   'dev/galacticraft/forge/GalacticraftForgeBootstrap.class' \
+  'dev/galacticraft/api/registry/BuiltInAddonRegistries.class' \
   'dev/galacticraft/mod/content/GCBlocks.class' \
   'dev/galacticraft/mod/content/item/GCItems.class' \
   'dev/galacticraft/mod/content/entity/RocketEntity.class'; do
