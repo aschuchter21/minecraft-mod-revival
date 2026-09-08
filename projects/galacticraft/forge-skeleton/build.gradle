@@ -17,6 +17,7 @@ java {
 
 legacyForge {
     version = "${minecraft_version}-${forge_version}"
+    validateAccessTransformers = true
 
     runs {
         client {
