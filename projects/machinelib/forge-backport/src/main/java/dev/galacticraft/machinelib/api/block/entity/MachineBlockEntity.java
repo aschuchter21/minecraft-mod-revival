@@ -16,6 +16,7 @@ import dev.galacticraft.machinelib.api.storage.slot.ItemResourceSlot;
 import dev.galacticraft.machinelib.api.storage.slot.SlotGroup;
 import dev.galacticraft.machinelib.api.storage.slot.SlotGroupType;
 import dev.galacticraft.machinelib.api.transfer.ResourceFlow;
+import dev.galacticraft.machinelib.api.util.BlockFace;
 import dev.galacticraft.machinelib.forge.capability.ForgeMachineCapabilityBridge;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -102,6 +103,9 @@ public abstract class MachineBlockEntity extends BlockEntity implements MenuProv
     public boolean isDisabled(Level level) { return this.redstoneActivation.isDisabled(level, this.worldPosition); }
     protected boolean isActive() { return this.status.type().isActive(); }
     public boolean areDropsDisabled() { return this.disableDrops; }
+
+    /** Hook retained from MachineLib 0.3 for machines with non-configurable faces. */
+    public boolean isFaceLocked(@NotNull BlockFace face) { return false; }
 
     public long getEnergyItemInsertionRate() { return (long) (this.energyStorage.getCapacity() / 160.0); }
     public long getEnergyItemExtractionRate() { return (long) (this.energyStorage.getCapacity() / 160.0); }
