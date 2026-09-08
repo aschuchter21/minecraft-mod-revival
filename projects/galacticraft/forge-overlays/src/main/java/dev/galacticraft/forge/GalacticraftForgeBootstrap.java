@@ -5,6 +5,7 @@
 package dev.galacticraft.forge;
 
 import com.mojang.logging.LogUtils;
+import dev.galacticraft.api.entity.attribute.GcApiEntityAttributes;
 import dev.galacticraft.api.gas.Gases;
 import dev.galacticraft.api.registry.AddonRegistries;
 import dev.galacticraft.api.registry.BuiltInRocketRegistries;
@@ -22,12 +23,14 @@ import dev.galacticraft.api.universe.celestialbody.landable.teleporter.Celestial
 import dev.galacticraft.api.universe.galaxy.Galaxy;
 import dev.galacticraft.impl.universe.BuiltinObjects;
 import dev.galacticraft.mod.Constant;
+import dev.galacticraft.mod.content.GCEntityTypes;
 import dev.galacticraft.mod.content.GCFluids;
 import dev.galacticraft.mod.content.entity.data.GCEntityDataSerializers;
 import dev.galacticraft.mod.data.gen.SatelliteChunkGenerator;
 import dev.galacticraft.mod.forge.fluid.ForgeGCFluidTypes;
 import dev.galacticraft.mod.forge.network.ForgeRocketNetworking;
 import net.minecraft.core.registries.Registries;
+import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -51,6 +54,7 @@ public final class GalacticraftForgeBootstrap {
         BuiltInRocketRegistries.initialize();
         modBus.addListener(this::registerDataPackRegistries);
         modBus.addListener(this::registerForgeAndVanillaEntries);
+        modBus.addListener(this::registerEntityAttributes);
 
         ForgeRocketNetworking.register();
         LOGGER.info("Galacticraft Forge 1.20.1 runtime bootstrap loaded");
@@ -89,9 +93,11 @@ public final class GalacticraftForgeBootstrap {
      * modded IDs synchronized and ensure Fluid#getFluidType is valid at runtime.
      */
     private void registerForgeAndVanillaEntries(RegisterEvent event) {
+        GcApiEntityAttributes.register(event);
         ForgeGCFluidTypes.register(event);
         Gases.register(event);
         GCFluids.register(event);
+        GCEntityTypes.register(event);
 
         event.register(Registries.CHUNK_GENERATOR, Constant.id("satellite"),
                 () -> SatelliteChunkGenerator.CODEC);
@@ -102,5 +108,9 @@ public final class GalacticraftForgeBootstrap {
                 Constant.id("rocket_part"), () -> GCEntityDataSerializers.ROCKET_PART);
         event.register(ForgeRegistries.Keys.ENTITY_DATA_SERIALIZERS,
                 Constant.id("rocket_upgrades"), () -> GCEntityDataSerializers.ROCKET_UPGRADES);
+    }
+
+    private void registerEntityAttributes(EntityAttributeCreationEvent event) {
+        GCEntityTypes.registerAttributes(event);
     }
 }
