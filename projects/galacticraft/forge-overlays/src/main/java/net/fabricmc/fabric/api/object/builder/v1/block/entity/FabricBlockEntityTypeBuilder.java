@@ -19,21 +19,21 @@ public final class FabricBlockEntityTypeBuilder<T extends BlockEntity> {
         T create(BlockPos pos, BlockState state);
     }
 
-    private final Factory<? extends T> factory;
+    private final Factory<T> factory;
     private final Block[] blocks;
 
-    private FabricBlockEntityTypeBuilder(Factory<? extends T> factory, Block[] blocks) {
+    private FabricBlockEntityTypeBuilder(Factory<T> factory, Block[] blocks) {
         this.factory = factory;
         this.blocks = blocks;
     }
 
     public static <T extends BlockEntity> FabricBlockEntityTypeBuilder<T> create(
-            Factory<? extends T> factory, Block... blocks) {
+            Factory<T> factory, Block... blocks) {
         return new FabricBlockEntityTypeBuilder<>(factory, blocks);
     }
 
     public BlockEntityType<T> build() {
-        return BlockEntityType.Builder.of((pos, state) -> this.factory.create(pos, state), this.blocks)
+        return BlockEntityType.Builder.<T>of((pos, state) -> this.factory.create(pos, state), this.blocks)
                 .build(null);
     }
 }
