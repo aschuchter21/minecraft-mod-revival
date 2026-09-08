@@ -9,6 +9,10 @@ on:
       - '.github/workflows/machinelib-forge.yml'
       - 'projects/machinelib/**'
 
+concurrency:
+  group: machinelib-forge-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build MachineLib Forge 1.20.1
@@ -47,11 +51,16 @@ jobs:
             dev/galacticraft/machinelib/impl/storage/MachineItemStorageImpl.class \
             dev/galacticraft/machinelib/impl/storage/MachineFluidStorageImpl.class \
             dev/galacticraft/machinelib/api/machine/MachineType.class \
+            dev/galacticraft/machinelib/api/machine/MachineState.class \
+            dev/galacticraft/machinelib/impl/machine/MachineStateImpl.class \
             dev/galacticraft/machinelib/api/block/entity/MachineBlockEntity.class \
             dev/galacticraft/machinelib/api/block/entity/RecipeMachineBlockEntity.class \
+            dev/galacticraft/machinelib/api/block/entity/BasicRecipeMachineBlockEntity.class \
+            dev/galacticraft/machinelib/api/compat/vanilla/RecipeTestContainer.class \
             dev/galacticraft/machinelib/api/menu/MachineMenu.class \
             dev/galacticraft/machinelib/api/menu/RecipeMachineMenu.class \
             dev/galacticraft/machinelib/api/menu/sync/MenuSyncHandler.class \
+            dev/galacticraft/machinelib/api/util/BlockFace.class \
             dev/galacticraft/machinelib/forge/compat/LegacyMachineBlockEntity.class \
             dev/galacticraft/machinelib/forge/item/ForgeItemStorageAdapter.class \
             dev/galacticraft/machinelib/forge/fluid/ForgeFluidStorageAdapter.class \
