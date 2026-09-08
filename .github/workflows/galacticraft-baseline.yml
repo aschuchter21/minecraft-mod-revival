@@ -10,6 +10,10 @@ on:
       - 'projects/galacticraft/**'
       - 'projects/machinelib/**'
 
+concurrency:
+  group: galacticraft-port-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   forge-1_20_1-skeleton:
     name: Forge 47.4.10 port skeleton
