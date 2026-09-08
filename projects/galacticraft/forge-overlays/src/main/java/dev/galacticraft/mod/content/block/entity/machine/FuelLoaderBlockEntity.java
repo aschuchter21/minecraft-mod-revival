@@ -41,6 +41,7 @@ public class FuelLoaderBlockEntity extends MachineBlockEntity {
     public static final int CHARGE_SLOT = 0;
     public static final int FUEL_INPUT_SLOT = 1;
     public static final int FUEL_TANK = 0;
+    private static final int TRANSFER_MB_PER_TICK = 20;
 
     private BlockPos connectionPos = BlockPos.ZERO;
     private Direction check;
@@ -64,18 +65,29 @@ public class FuelLoaderBlockEntity extends MachineBlockEntity {
         if (blockEntity instanceof RocketLaunchPadBlockEntity launchPad) {
             if (!launchPad.hasRocket()) return GCMachineStatuses.NO_ROCKET;
             entity = level.getEntity(launchPad.getRocketEntityId());
-            if (!(entity instanceof RocketEntity)) return GCMachineStatuses.NO_ROCKET;
-        } else {
-            return GCMachineStatuses.NO_ROCKET;
-        }
+            if (!(entity instanceof RocketEntity rocket)) return GCMachineStatuses.NO_ROCKET;
 
-        /*
-         * The recovered 1.20.1 source also left the actual pad -> rocket fuel
-         * transfer commented out. Keeping that boundary explicit here lets the
-         * machine compile/run on Forge now; the transfer is completed alongside
-         * the Forge RocketEntity fluid capability port.
-         */
-        return GCMachineStatuses.LOADING;
+            FluidResourceSlot source = this.fluidStorage().getSlot(FUEL_TANK);
+            if (source.isEmpty() || !source.contains(GCFluids.FUEL)) return GCMachineStatuses.NOT_ENOUGH_FUEL;
+
+            IFluidHandler rocketTank = rocket.getCapability(ForgeCapabilities.FLUID_HANDLER).orElse(null);
+            if (rocketTank == null) return GCMachineStatuses.NO_ROCKET;
+
+            int availableMb = (int) Math.min(TRANSFER_MB_PER_TICK,
+                    source.getAmount() / FluidResourceSlot.INTERNAL_UNITS_PER_MB);
+            if (availableMb <= 0) return GCMachineStatuses.NOT_ENOUGH_FUEL;
+
+            FluidStack offered = new FluidStack(GCFluids.FUEL, availableMb);
+            int accepted = rocketTank.fill(offered, IFluidHandler.FluidAction.SIMULATE);
+            if (accepted <= 0) return GCMachineStatuses.ROCKET_IS_FULL;
+
+            int inserted = rocketTank.fill(new FluidStack(GCFluids.FUEL, accepted), IFluidHandler.FluidAction.EXECUTE);
+            if (inserted <= 0) return GCMachineStatuses.ROCKET_IS_FULL;
+
+            source.extract((long) inserted * FluidResourceSlot.INTERNAL_UNITS_PER_MB);
+            return GCMachineStatuses.LOADING;
+        }
+        return GCMachineStatuses.NO_ROCKET;
     }
 
     @Override
