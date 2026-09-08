@@ -28,6 +28,7 @@ public final class MachineItemStorageImpl implements MachineItemStorage {
     private final ItemResourceSlot[] slots;
     private final Map<SlotGroupType, SlotGroup<Item, ItemStack, ItemResourceSlot>> groups = new IdentityHashMap<>();
     private Runnable listener;
+    private long modifications;
 
     public MachineItemStorageImpl(ItemResourceSlot[] slots) {
         this.slots = slots.clone();
@@ -61,6 +62,7 @@ public final class MachineItemStorageImpl implements MachineItemStorage {
         if (group == null) throw new IllegalArgumentException("Unknown slot group: " + type.name().getString());
         return group;
     }
+    @Override public long getModifications() { return this.modifications; }
     @Override public void setListener(Runnable listener) { this.listener = listener; }
     @Override public IItemHandler getExposedStorage(ResourceFlow flow) { return new ForgeItemStorageAdapter(this, flow); }
     @Override public Iterator<ItemResourceSlot> iterator() { return Arrays.asList(this.slots).iterator(); }
@@ -132,5 +134,8 @@ public final class MachineItemStorageImpl implements MachineItemStorage {
     @Override public boolean stillValid(Player player) { return true; }
     @Override public void clearContent() { for (ItemResourceSlot slot : this.slots) if (!slot.isEmpty()) slot.set(null, null, 0); }
 
-    private void markModified() { if (this.listener != null) this.listener.run(); }
+    private void markModified() {
+        this.modifications++;
+        if (this.listener != null) this.listener.run();
+    }
 }
