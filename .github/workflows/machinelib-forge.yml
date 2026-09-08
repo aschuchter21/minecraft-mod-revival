@@ -48,6 +48,10 @@ jobs:
             dev/galacticraft/machinelib/impl/storage/MachineFluidStorageImpl.class \
             dev/galacticraft/machinelib/api/machine/MachineType.class \
             dev/galacticraft/machinelib/api/block/entity/MachineBlockEntity.class \
+            dev/galacticraft/machinelib/api/block/entity/RecipeMachineBlockEntity.class \
+            dev/galacticraft/machinelib/api/menu/MachineMenu.class \
+            dev/galacticraft/machinelib/api/menu/RecipeMachineMenu.class \
+            dev/galacticraft/machinelib/api/menu/sync/MenuSyncHandler.class \
             dev/galacticraft/machinelib/forge/compat/LegacyMachineBlockEntity.class \
             dev/galacticraft/machinelib/forge/item/ForgeItemStorageAdapter.class \
             dev/galacticraft/machinelib/forge/fluid/ForgeFluidStorageAdapter.class \
