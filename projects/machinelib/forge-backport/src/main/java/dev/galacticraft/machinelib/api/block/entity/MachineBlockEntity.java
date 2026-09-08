@@ -39,6 +39,8 @@ import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.energy.IEnergyStorage;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -198,6 +200,26 @@ public abstract class MachineBlockEntity extends BlockEntity implements MenuProv
             if (accepted <= 0) continue;
             int extracted = source.extractEnergy(accepted, false);
             if (extracted > 0) target.receiveEnergy(extracted, false);
+        }
+    }
+
+    /** Push machine fluids into adjacent Forge fluid handlers. */
+    protected void trySpreadFluids(@NotNull ServerLevel level, @NotNull BlockState state) {
+        IFluidHandler source = this.fluidStorage.getExposedStorage(ResourceFlow.OUTPUT);
+        if (source == null) return;
+        for (Direction direction : Direction.values()) {
+            BlockEntity neighbor = level.getBlockEntity(this.worldPosition.relative(direction));
+            if (neighbor == null) continue;
+            IFluidHandler target = neighbor.getCapability(ForgeCapabilities.FLUID_HANDLER, direction.getOpposite()).orElse(null);
+            if (target == null) continue;
+
+            FluidStack offered = source.drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE);
+            if (offered.isEmpty()) break;
+            int accepted = target.fill(offered, IFluidHandler.FluidAction.SIMULATE);
+            if (accepted <= 0) continue;
+
+            FluidStack extracted = source.drain(accepted, IFluidHandler.FluidAction.EXECUTE);
+            if (!extracted.isEmpty()) target.fill(extracted, IFluidHandler.FluidAction.EXECUTE);
         }
     }
 
