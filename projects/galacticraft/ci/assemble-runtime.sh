@@ -41,12 +41,9 @@ cp -R "$OVERLAY_SRC/." "$OUT_DIR/src/main/java/"
 )
 
 # IMPORTANT: never leave two definitions of a source-ported class on the runtime
-# classpath. Gradle SourceSet output ordering can place an extra output directory
-# ahead of build/classes/java/main, which caused Forge to load the recovered
-# Fabric BuiltInAddonRegistries instead of our Forge replacement. Remove every
-# recovered class that has a Forge overlay source, including compiler-generated
-# nested/anonymous classes. The freshly compiled overlay is then the sole runtime
-# definition and cannot lose a classpath-precedence race.
+# classpath. Remove every recovered class that has a Forge overlay source,
+# including compiler-generated nested/anonymous classes. The freshly compiled
+# overlay is then the sole runtime definition.
 REMOVED_OVERLAY_CLASSES=0
 while IFS= read -r source; do
   rel="${source#"$OVERLAY_SRC/"}"
@@ -97,9 +94,20 @@ cp "$UPSTREAM_GC/src/main/resources/pack.mcmeta" "$OUT_DIR/src/main/resources/pa
 
 cat >> "$OUT_DIR/build.gradle" <<'GRADLE'
 
-sourceSets {
-    main {
-        output.dir(file('upstream-classes'))
+// The recovered upstream classes must live in Forge's normal Java class output.
+// Adding them as a separate SourceSet output lets them bypass the production
+// remapping/reobfuscation path. Copy them after the Forge overlays compile so
+// LegacyForge sees one coherent main class tree before jar/reobf processing.
+def recoveredUpstreamClasses = file('upstream-classes')
+
+tasks.named('compileJava') {
+    inputs.dir(recoveredUpstreamClasses)
+    doLast {
+        project.copy {
+            from recoveredUpstreamClasses
+            into destinationDirectory.get().asFile
+            include '**/*.class'
+        }
     }
 }
 
@@ -125,6 +133,11 @@ RUNTIME_JAR=$(find "$OUT_DIR/build/libs" -maxdepth 1 -type f \
   -name 'Galacticraft-Forge-1.20.1-*.jar' ! -name '*-sources.jar' | head -n 1)
 [[ -n "$RUNTIME_JAR" && -s "$RUNTIME_JAR" ]]
 
+# Recovered classes should now be physically staged beside compiled overlays,
+# rather than represented as an auxiliary SourceSet output directory.
+[[ -f "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/GCBlocks.class" ]]
+[[ -f "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/block/entity/RocketWorkbenchBlockEntity.class" ]]
+
 echo "Experimental Galacticraft runtime: $RUNTIME_JAR"
 echo "MachineLib runtime: $MACHINE_RUNTIME_JAR"
 
@@ -141,7 +154,9 @@ for entry in \
   'dev/galacticraft/api/registry/BuiltInAddonRegistries.class' \
   'dev/galacticraft/mod/content/GCBlocks.class' \
   'dev/galacticraft/mod/content/item/GCItems.class' \
-  'dev/galacticraft/mod/content/entity/RocketEntity.class'; do
+  'dev/galacticraft/mod/content/entity/RocketEntity.class' \
+  'dev/galacticraft/mod/content/block/entity/RocketWorkbenchBlockEntity.class' \
+  'dev/galacticraft/mod/screen/GCMenuTypes.class'; do
   grep -Fxq "$entry" "$JAR_ENTRIES" || {
     echo "Missing required runtime entry: $entry" >&2
     exit 1
