@@ -4,6 +4,7 @@
  */
 package dev.galacticraft.machinelib.api.block.entity;
 
+import dev.galacticraft.machinelib.api.machine.MachineState;
 import dev.galacticraft.machinelib.api.machine.MachineStatus;
 import dev.galacticraft.machinelib.api.machine.MachineStatuses;
 import dev.galacticraft.machinelib.api.machine.MachineType;
@@ -56,6 +57,7 @@ public abstract class MachineBlockEntity extends BlockEntity implements MenuProv
     private final MachineItemStorage itemStorage;
     private final MachineFluidStorage fluidStorage;
     private final SecuritySettings security = SecuritySettings.create();
+    private final MachineState state;
     private final Component name;
     private final ForgeMachineCapabilityBridge capabilities;
 
@@ -68,6 +70,7 @@ public abstract class MachineBlockEntity extends BlockEntity implements MenuProv
         super(type.getBlockEntityType(), pos, state);
         this.machineType = type;
         this.name = state.getBlock().getName();
+        this.state = MachineState.create(type);
         this.energyStorage = type.createEnergyStorage();
         this.itemStorage = type.createItemStorage();
         this.fluidStorage = type.createFluidStorage();
@@ -86,12 +89,14 @@ public abstract class MachineBlockEntity extends BlockEntity implements MenuProv
     public final MachineItemStorage itemStorage() { return this.itemStorage; }
     public final MachineFluidStorage fluidStorage() { return this.fluidStorage; }
     public final SecuritySettings getSecurity() { return this.security; }
+    public final MachineState getState() { return this.state; }
 
     public MachineStatus getStatus() { return this.status; }
     public void setStatus(MachineStatus status) {
         if (status == null) status = MachineStatus.INVALID;
         if (this.status != status) {
             this.status = status;
+            this.state.setStatus(status);
             this.setChanged();
         }
     }
@@ -103,7 +108,7 @@ public abstract class MachineBlockEntity extends BlockEntity implements MenuProv
     }
 
     public boolean isDisabled(Level level) { return this.redstoneActivation.isDisabled(level, this.worldPosition); }
-    protected boolean isActive() { return this.status.type().isActive(); }
+    protected boolean isActive() { return this.state.isActive(); }
     public boolean areDropsDisabled() { return this.disableDrops; }
 
     /** Hook retained from MachineLib 0.3 for machines with non-configurable faces. */
@@ -115,6 +120,7 @@ public abstract class MachineBlockEntity extends BlockEntity implements MenuProv
     public final void tickBase(@NotNull Level level, @NotNull BlockPos pos, @NotNull BlockState state,
                                @NotNull ProfilerFiller profiler) {
         this.setBlockState(state);
+        this.state.setPowered(level.hasNeighborSignal(pos));
         if (level.isClientSide()) {
             this.tickClient(level, pos, state);
             return;
