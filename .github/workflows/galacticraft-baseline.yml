@@ -206,6 +206,11 @@ jobs:
         working-directory: Revival/projects/machinelib/forge-backport
         run: |
           gradle clean build --stacktrace
+          # The normal Forge jar is reobfuscated for runtime distribution. Overlay
+          # validation compiles official-mapped source, so also package the raw
+          # compile output in the same development namespace.
+          jar --create --file build/libs/MachineLib-Forge-1.20.1-dev.jar -C build/classes/java/main .
+          test -s build/libs/MachineLib-Forge-1.20.1-dev.jar
           echo '--- Forge MachineLib jars ---'
           find build/libs -maxdepth 1 -type f -printf '%f\n' | sort
 
@@ -215,14 +220,14 @@ jobs:
           cp -R Revival/projects/galacticraft/forge-skeleton ForgeEnergyValidation
           mkdir -p ForgeEnergyValidation/libs
           cp gc-1.20.1-support.jar ForgeEnergyValidation/libs/
-          MACHINE_FORGE_JAR=$(find Revival/projects/machinelib/forge-backport/build/libs -maxdepth 1 -type f -name 'MachineLib-Forge-1.20.1-*.jar' ! -name '*-sources.jar' | head -n 1)
-          test -n "$MACHINE_FORGE_JAR"
-          cp "$MACHINE_FORGE_JAR" ForgeEnergyValidation/libs/machinelib-forge.jar
+          MACHINE_FORGE_DEV_JAR=Revival/projects/machinelib/forge-backport/build/libs/MachineLib-Forge-1.20.1-dev.jar
+          test -s "$MACHINE_FORGE_DEV_JAR"
+          cp "$MACHINE_FORGE_DEV_JAR" ForgeEnergyValidation/libs/machinelib-forge-dev.jar
           cp -R Revival/projects/galacticraft/forge-overlays/src/main/java/. ForgeEnergyValidation/src/main/java/
           cat >> ForgeEnergyValidation/build.gradle <<'EOF'
 
           dependencies {
-              compileOnly files('libs/gc-1.20.1-support.jar', 'libs/machinelib-forge.jar')
+              compileOnly files('libs/gc-1.20.1-support.jar', 'libs/machinelib-forge-dev.jar')
           }
           EOF
           echo '--- Forge overlay Java sources ---'
