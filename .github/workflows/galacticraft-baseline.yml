@@ -167,8 +167,6 @@ jobs:
           local_repo = '''\n    flatDir {\n        dirs("../MachineLib/build/libs", "../DynamicDimensions/Fabric/build/libs")\n    }'''
           s = s[:insert_at] + local_repo + s[insert_at:]
 
-          # MachineLib's original Maven POM supplied this transitively. flatDir has no
-          # POM metadata, so restore the exact dependency explicitly.
           dep_marker = 'dependencies {'
           dep_idx = s.find(dep_marker)
           if dep_idx < 0:
@@ -199,21 +197,33 @@ jobs:
           test -s gc-1.20.1-support.jar
           echo "Support jar size: $(stat -c%s gc-1.20.1-support.jar) bytes"
 
+      - name: Build Forge MachineLib compatibility runtime
+        working-directory: Revival/projects/machinelib/forge-backport
+        run: |
+          gradle clean build --stacktrace
+          echo '--- Forge MachineLib jars ---'
+          find build/libs -maxdepth 1 -type f -printf '%f\n' | sort
+
       - name: Validate Forge energy and wire overlays
         run: |
           rm -rf ForgeEnergyValidation
           cp -R Revival/projects/galacticraft/forge-skeleton ForgeEnergyValidation
           mkdir -p ForgeEnergyValidation/libs
           cp gc-1.20.1-support.jar ForgeEnergyValidation/libs/
+          MACHINE_FORGE_JAR=$(find Revival/projects/machinelib/forge-backport/build/libs -maxdepth 1 -type f -name 'MachineLib-Forge-1.20.1-*.jar' ! -name '*-sources.jar' | head -n 1)
+          test -n "$MACHINE_FORGE_JAR"
+          cp "$MACHINE_FORGE_JAR" ForgeEnergyValidation/libs/machinelib-forge.jar
           cp -R Revival/projects/galacticraft/forge-overlays/src/main/java/. ForgeEnergyValidation/src/main/java/
           cat >> ForgeEnergyValidation/build.gradle <<'EOF'
 
           dependencies {
-              compileOnly files('libs/gc-1.20.1-support.jar')
+              compileOnly files('libs/gc-1.20.1-support.jar', 'libs/machinelib-forge.jar')
           }
           EOF
           echo '--- Forge overlay Java sources ---'
           find ForgeEnergyValidation/src/main/java -type f -name '*.java' -printf '%P\n' | sort
+          echo '--- Forge validation libraries ---'
+          find ForgeEnergyValidation/libs -maxdepth 1 -type f -printf '%f\n' | sort
           gradle -p ForgeEnergyValidation clean compileJava --stacktrace
 
       - name: Inventory remaining Fabric and MachineLib boundaries
@@ -231,7 +241,7 @@ jobs:
             echo '=== MachineLib imports ==='
             grep -RhnE '^import dev\.galacticraft\.machinelib\.' Galacticraft/src/main/java || true
             echo
-            echo '=== Fabric files remaining after the six-class energy slice ==='
+            echo '=== Fabric files remaining after the Forge overlay slice ==='
             grep -RlE '^import (net\.fabricmc\.|team\.reborn\.energy\.)' Galacticraft/src/main/java \
               | sed 's#^Galacticraft/src/main/java/##' | sort || true
           } | tee port-boundaries.txt
