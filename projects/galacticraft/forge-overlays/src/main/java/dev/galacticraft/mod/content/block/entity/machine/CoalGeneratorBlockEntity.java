@@ -14,16 +14,15 @@
 package dev.galacticraft.mod.content.block.entity.machine;
 
 import com.google.common.annotations.VisibleForTesting;
-import dev.galacticraft.machinelib.api.block.entity.MachineBlockEntity;
 import dev.galacticraft.machinelib.api.machine.MachineStatus;
 import dev.galacticraft.machinelib.api.machine.MachineStatuses;
 import dev.galacticraft.machinelib.api.storage.slot.ItemResourceSlot;
+import dev.galacticraft.machinelib.forge.compat.LegacyMachineBlockEntity;
 import dev.galacticraft.mod.Constant;
 import dev.galacticraft.mod.Galacticraft;
 import dev.galacticraft.mod.content.GCMachineTypes;
 import dev.galacticraft.mod.content.block.machine.CoalGeneratorBlock;
 import dev.galacticraft.mod.machine.GCMachineStatuses;
-import dev.galacticraft.mod.machine.storage.io.GCSlotGroupTypes;
 import dev.galacticraft.mod.screen.CoalGeneratorMenu;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -44,10 +43,13 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Forge 1.20.1 overlay for Galacticraft's coal generator.
- * Removes Fabric transactions from energy production and resolves the historic
- * Galacticraft/MachineLib extractOne API skew while preserving generator logic.
+ * Removes Fabric transactions from energy production while preserving the
+ * original MachineLib 0.3 flat-slot API through the Forge compatibility base.
  */
-public class CoalGeneratorBlockEntity extends MachineBlockEntity {
+public class CoalGeneratorBlockEntity extends LegacyMachineBlockEntity {
+    public static final int CHARGE_SLOT = 0;
+    public static final int INPUT_SLOT = 1;
+
     @VisibleForTesting
     public static final Object2IntMap<Item> FUEL_MAP = Util.make(new Object2IntArrayMap<>(3), map -> {
         map.defaultReturnValue(-1);
@@ -72,7 +74,7 @@ public class CoalGeneratorBlockEntity extends MachineBlockEntity {
             this.setHeat(Math.max(0, this.heat - 0.02d));
         }
         profiler.push("charge");
-        this.drainPowerToStack(GCSlotGroupTypes.ENERGY_TO_ITEM);
+        this.drainPowerToStack(CHARGE_SLOT);
         profiler.pop();
     }
 
@@ -111,12 +113,12 @@ public class CoalGeneratorBlockEntity extends MachineBlockEntity {
         this.fuelTime = 0;
         this.fuelLength = 0;
 
-        ItemResourceSlot slot = this.itemStorage().getGroup(GCSlotGroupTypes.COAL).getSlot(0);
+        ItemResourceSlot slot = this.itemStorage().getSlot(INPUT_SLOT);
         if (slot.getModifications() != this.fuelSlotModCount) {
             this.fuelSlotModCount = slot.getModifications();
             if (slot.isEmpty()) return false;
             int time = FUEL_MAP.getInt(slot.getResource());
-            if (time != -1 && slot.extractOne() != null) {
+            if (time != -1 && slot.consumeOne() != null) {
                 this.fuelLength = time;
                 return true;
             }
