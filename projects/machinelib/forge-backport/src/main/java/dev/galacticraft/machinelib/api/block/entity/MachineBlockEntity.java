@@ -21,8 +21,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -40,10 +42,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Forge 47.4.10 server/runtime port of MachineLib 0.2's base machine block entity.
+ * Forge 47.4.10 server/runtime port of MachineLib 0.2/0.3's base machine block entity.
  * It preserves the API Galacticraft 1.20.1 machines call while replacing Fabric
  * transfer lookups with Forge capabilities. Client rendering, configurable face
- * routing and menu packet synchronization are intentionally separate checkpoints.
+ * routing and full menu packet synchronization are separate checkpoints.
  */
 public abstract class MachineBlockEntity extends BlockEntity implements MenuProvider {
     private final MachineType<? extends MachineBlockEntity, ? extends AbstractContainerMenu> machineType;
@@ -132,6 +134,11 @@ public abstract class MachineBlockEntity extends BlockEntity implements MenuProv
     protected void tickClient(@NotNull Level level, @NotNull BlockPos pos, @NotNull BlockState state) {}
     protected abstract @NotNull MachineStatus tick(@NotNull ServerLevel level, @NotNull BlockPos pos,
                                                     @NotNull BlockState state, @NotNull ProfilerFiller profiler);
+
+    /** Base opening payload consumed by the Forge MachineMenu client constructor. */
+    public void writeScreenOpeningData(@NotNull ServerPlayer player, @NotNull FriendlyByteBuf buf) {
+        buf.writeBlockPos(this.getBlockPos());
+    }
 
     /** Move energy from this machine into the first item of the named transfer group. */
     protected void drainPowerToStack(@NotNull SlotGroupType type) {
