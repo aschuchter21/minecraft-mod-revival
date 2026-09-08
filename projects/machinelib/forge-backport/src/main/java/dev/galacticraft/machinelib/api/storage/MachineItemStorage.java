@@ -50,6 +50,9 @@ public interface MachineItemStorage extends Container, Iterable<ItemResourceSlot
     void setListener(Runnable listener);
     IItemHandler getExposedStorage(ResourceFlow flow);
 
+    boolean canInsert(int start, int len, Item resource, CompoundTag tag, long amount);
+    long insertMatching(int start, int len, Item resource, CompoundTag tag, long amount);
+
     boolean consumeOne(Item resource);
     boolean consumeOne(Item resource, CompoundTag tag);
     long consume(Item resource, long amount);
