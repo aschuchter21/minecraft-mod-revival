@@ -64,6 +64,32 @@ jobs:
           printf '%s\n' "$GC_JAR" > gc-jar-path.txt
           printf '%s\n' "$ML_JAR" > ml-jar-path.txt
 
+      - name: Diagnose production jar namespace
+        run: |
+          set -euo pipefail
+          GC_JAR=$(cat gc-jar-path.txt)
+
+          echo '--- Galacticraft production jar SHA256 ---'
+          sha256sum "$GC_JAR"
+
+          echo '--- Bootstrap constant-pool Minecraft class references ---'
+          javap -classpath "$GC_JAR" -verbose dev.galacticraft.forge.GalacticraftForgeBootstrap \
+            | grep -E 'net/minecraft|net/minecraftforge' \
+            | head -n 120 || true
+
+          echo '--- BuiltinObjects constant-pool Minecraft class references ---'
+          javap -classpath "$GC_JAR" -verbose dev.galacticraft.impl.universe.BuiltinObjects \
+            | grep -E 'net/minecraft|net/minecraftforge' \
+            | head -n 120 || true
+
+          echo '--- GCBlocks constant-pool block/property references ---'
+          javap -classpath "$GC_JAR" -verbose dev.galacticraft.mod.content.GCBlocks \
+            | grep -E 'BlockBehaviour|StairBlock|net/minecraft/world/level/block' \
+            | head -n 160 || true
+
+          echo '--- Access transformer embedded in production jar ---'
+          unzip -p "$GC_JAR" META-INF/accesstransformer.cfg || true
+
       - name: Install Forge 47.4.10 server
         run: |
           set -euo pipefail
@@ -77,6 +103,19 @@ jobs:
           )
           test -f server/run.sh
           chmod +x server/run.sh
+
+          echo '--- Installed production Minecraft/Forge jars ---'
+          find server/libraries -type f \( -name '*1.20.1*.jar' -o -name '*47.4.10*.jar' \) -printf '%p\n' | sort | head -n 100
+
+          echo '--- Does the installed production runtime expose named BlockBehaviour? ---'
+          FOUND_NAMED=0
+          while IFS= read -r jar; do
+            if jar tf "$jar" 2>/dev/null | grep -Fqx 'net/minecraft/world/level/block/state/BlockBehaviour$Properties.class'; then
+              echo "FOUND in $jar"
+              FOUND_NAMED=1
+            fi
+          done < <(find server/libraries -type f -name '*.jar' -print)
+          echo "named_blockbehaviour_properties_found=$FOUND_NAMED"
 
       - name: Install experimental mods
         run: |
