@@ -81,7 +81,7 @@ jobs:
           if-no-files-found: error
 
   recovered-official-1_20_1-fabric:
-    name: Recover official GC5 1.20.1 baseline + validate Forge energy slice
+    name: Recover official GC5 1.20.1 baseline + validate Forge overlays
     runs-on: ubuntu-latest
     steps:
       - name: Checkout revival port repository
@@ -123,8 +123,6 @@ jobs:
 
       - name: Build exact MachineLib dependency
         working-directory: MachineLib
-        env:
-          GITHUB_SHA: 031a62640ce753e0c6a5eb4e8ee6d495fecb2ecf
         run: |
           chmod +x gradlew
           ./gradlew remapJar --stacktrace
@@ -141,7 +139,7 @@ jobs:
           echo '--- DynamicDimensions Fabric jars ---'
           find Fabric/build/libs -maxdepth 1 -type f -printf '%f\n' | sort
 
-      - name: Wire recovered jars directly into Galacticraft
+      - name: Publish recovered dependencies to isolated local Maven
         working-directory: Galacticraft
         run: |
           MACHINE_JAR=$(find ../MachineLib/build/libs -maxdepth 1 -type f -name 'MachineLib-*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' ! -name '*-dev.jar' | head -n 1)
@@ -156,6 +154,34 @@ jobs:
           echo "Recovered MachineLib: $MACHINE_JAR -> $MACHINE_VERSION"
           echo "Recovered DynamicDimensions: $DD_JAR -> $DD_VERSION"
 
+          LOCAL_MAVEN=../RecoveredMaven/dev/galacticraft
+          MACHINE_DIR="$LOCAL_MAVEN/MachineLib/$MACHINE_VERSION"
+          DD_DIR="$LOCAL_MAVEN/dynamicdimensions-fabric/$DD_VERSION"
+          mkdir -p "$MACHINE_DIR" "$DD_DIR"
+
+          cp "$MACHINE_JAR" "$MACHINE_DIR/MachineLib-$MACHINE_VERSION.jar"
+          cp "$DD_JAR" "$DD_DIR/dynamicdimensions-fabric-$DD_VERSION.jar"
+
+          cat > "$MACHINE_DIR/MachineLib-$MACHINE_VERSION.pom" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <project xmlns="http://maven.apache.org/POM/4.0.0">
+            <modelVersion>4.0.0</modelVersion>
+            <groupId>dev.galacticraft</groupId>
+            <artifactId>MachineLib</artifactId>
+            <version>$MACHINE_VERSION</version>
+          </project>
+          EOF
+
+          cat > "$DD_DIR/dynamicdimensions-fabric-$DD_VERSION.pom" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <project xmlns="http://maven.apache.org/POM/4.0.0">
+            <modelVersion>4.0.0</modelVersion>
+            <groupId>dev.galacticraft</groupId>
+            <artifactId>dynamicdimensions-fabric</artifactId>
+            <version>$DD_VERSION</version>
+          </project>
+          EOF
+
           sed -i "s/^machinelib.version=.*/machinelib.version=${MACHINE_VERSION}/" gradle.properties
           sed -i "s/^dynamicdimensions.version=.*/dynamicdimensions.version=${DD_VERSION}/" gradle.properties
 
@@ -169,24 +195,41 @@ jobs:
           if idx < 0:
               raise SystemExit('Could not find repositories block')
           insert_at = idx + len(marker)
-          local_repo = '''\n    flatDir {\n        dirs("../MachineLib/build/libs", "../DynamicDimensions/Fabric/build/libs")\n    }'''
-          s = s[:insert_at] + local_repo + s[insert_at:]
+          recovered = '''
+              exclusiveContent {
+                  forRepository {
+                      maven {
+                          name = "Recovered Galacticraft Dependencies"
+                          url = uri("../RecoveredMaven")
+                      }
+                  }
+                  filter {
+                      includeGroup("dev.galacticraft")
+                  }
+              }
+          '''
+          s = s[:insert_at] + recovered + s[insert_at:]
 
           dep_marker = 'dependencies {'
           dep_idx = s.find(dep_marker)
           if dep_idx < 0:
               raise SystemExit('Could not find dependencies block')
           dep_insert = dep_idx + len(dep_marker)
-          energy_dep = '''\n    modImplementation("teamreborn:energy:3.0.0") {\n        isTransitive = false\n    }'''
+          energy_dep = '''
+              modImplementation("teamreborn:energy:3.0.0") {
+                  isTransitive = false
+              }
+          '''
           s = s[:dep_insert] + energy_dep + s[dep_insert:]
-
           p.write_text(s)
           PY
 
           echo '--- Effective recovered dependency versions ---'
           grep -E '^(dynamicdimensions|machinelib)\.version=' gradle.properties
-          echo '--- Restored Reborn Energy dependency ---'
-          grep -n -A3 'teamreborn:energy' build.gradle.kts
+          echo '--- Isolated local Maven contents ---'
+          find ../RecoveredMaven -type f -printf '%P\n' | sort
+          echo '--- Recovered Maven repository block ---'
+          grep -n -A12 'Recovered Galacticraft Dependencies' build.gradle.kts
 
       - name: Compile recovered official Galacticraft 1.20.1
         working-directory: Galacticraft
@@ -206,15 +249,12 @@ jobs:
         working-directory: Revival/projects/machinelib/forge-backport
         run: |
           gradle clean build --stacktrace
-          # The normal Forge jar is reobfuscated for runtime distribution. Overlay
-          # validation compiles official-mapped source, so also package the raw
-          # compile output in the same development namespace.
           jar --create --file build/libs/MachineLib-Forge-1.20.1-dev.jar -C build/classes/java/main .
           test -s build/libs/MachineLib-Forge-1.20.1-dev.jar
           echo '--- Forge MachineLib jars ---'
           find build/libs -maxdepth 1 -type f -printf '%f\n' | sort
 
-      - name: Validate Forge energy and wire overlays
+      - name: Validate Forge overlays
         run: |
           rm -rf ForgeEnergyValidation
           cp -R Revival/projects/galacticraft/forge-skeleton ForgeEnergyValidation
