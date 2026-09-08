@@ -23,9 +23,12 @@ import dev.galacticraft.api.universe.celestialbody.landable.teleporter.Celestial
 import dev.galacticraft.api.universe.galaxy.Galaxy;
 import dev.galacticraft.impl.universe.BuiltinObjects;
 import dev.galacticraft.mod.Constant;
+import dev.galacticraft.mod.content.GCBlockEntityTypes;
+import dev.galacticraft.mod.content.GCBlocks;
 import dev.galacticraft.mod.content.GCEntityTypes;
 import dev.galacticraft.mod.content.GCFluids;
 import dev.galacticraft.mod.content.entity.data.GCEntityDataSerializers;
+import dev.galacticraft.mod.content.item.GCItems;
 import dev.galacticraft.mod.data.gen.SatelliteChunkGenerator;
 import dev.galacticraft.mod.forge.fluid.ForgeGCFluidTypes;
 import dev.galacticraft.mod.forge.network.ForgeRocketNetworking;
@@ -89,8 +92,10 @@ public final class GalacticraftForgeBootstrap {
 
     /**
      * Loader-native replacements for the direct vanilla registrations performed by
-     * the Fabric API initializer. Forge's serializer and fluid-type registries keep
-     * modded IDs synchronized and ensure Fluid#getFluidType is valid at runtime.
+     * the Fabric initializers. The recovered block/item/block-entity classes are
+     * invoked only while their matching Forge registry is open. Their direct
+     * Registry.register calls therefore enter Forge's NamespacedWrapper and keep the
+     * exact original IDs and object graph while the remaining classes are source-ported.
      */
     private void registerForgeAndVanillaEntries(RegisterEvent event) {
         GcApiEntityAttributes.register(event);
@@ -98,6 +103,16 @@ public final class GalacticraftForgeBootstrap {
         Gases.register(event);
         GCFluids.register(event);
         GCEntityTypes.register(event);
+
+        if (event.getRegistryKey().equals(Registries.BLOCK)) {
+            GCBlocks.register();
+        }
+        if (event.getRegistryKey().equals(Registries.BLOCK_ENTITY_TYPE)) {
+            GCBlockEntityTypes.register();
+        }
+        if (event.getRegistryKey().equals(Registries.ITEM)) {
+            GCItems.register();
+        }
 
         event.register(Registries.CHUNK_GENERATOR, Constant.id("satellite"),
                 () -> SatelliteChunkGenerator.CODEC);
