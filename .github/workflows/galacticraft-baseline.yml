@@ -8,6 +8,7 @@ on:
     paths:
       - '.github/workflows/galacticraft-baseline.yml'
       - 'projects/galacticraft/**'
+      - 'projects/machinelib/**'
 
 jobs:
   forge-1_20_1-skeleton:
