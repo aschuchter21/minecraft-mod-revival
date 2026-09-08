@@ -26,8 +26,8 @@ import java.util.function.Supplier;
 
 /**
  * Loader-neutral menu synchronization contract used by Galacticraft's machine
- * menus. Forge packet transport is wired separately; these handlers preserve the
- * MachineLib 0.3 serialization surface and change detection semantics.
+ * menus. Forge packet transport is wired separately; the handlers preserve the
+ * MachineLib 0.3 serialization and change-detection behavior.
  */
 public interface MenuSyncHandler {
     static @NotNull MenuSyncHandler simple(LongSupplier supplier, LongConsumer consumer) {
@@ -102,18 +102,16 @@ public interface MenuSyncHandler {
         EnumHandler(Supplier<E> supplier, Consumer<E> consumer, E[] allowedValues) {
             this.supplier = supplier;
             this.consumer = consumer;
-            this.allowedValues = allowedValues.clone();
+            this.allowedValues = allowedValues;
         }
 
         @Override public boolean needsSyncing() { return this.value != this.supplier.get(); }
         @Override public void sync(@NotNull FriendlyByteBuf buf) {
             this.value = this.supplier.get();
-            buf.writeVarInt(this.value == null ? -1 : this.value.ordinal());
+            buf.writeVarInt(this.value.ordinal());
         }
         @Override public void read(@NotNull FriendlyByteBuf buf) {
-            int ordinal = buf.readVarInt();
-            if (ordinal < 0 || ordinal >= this.allowedValues.length) return;
-            this.value = this.allowedValues[ordinal];
+            this.value = this.allowedValues[buf.readVarInt()];
             this.consumer.accept(this.value);
         }
     }
@@ -121,28 +119,50 @@ public interface MenuSyncHandler {
     final class BooleanArrayHandler implements MenuSyncHandler {
         private final boolean[] input;
         private final boolean[] output;
-        private boolean[] value;
 
         BooleanArrayHandler(boolean[] input, boolean[] output) {
+            if (input.length != output.length) {
+                throw new IllegalArgumentException("input and output boolean arrays must have equal length");
+            }
             this.input = input;
             this.output = output;
-            this.value = input.clone();
         }
 
-        @Override public boolean needsSyncing() { return !Arrays.equals(this.value, this.input); }
-        @Override public void sync(@NotNull FriendlyByteBuf buf) {
-            this.value = this.input.clone();
-            buf.writeVarInt(this.value.length);
-            for (boolean flag : this.value) buf.writeBoolean(flag);
+        @Override public boolean needsSyncing() {
+            return !Arrays.equals(this.input, this.output);
         }
-        @Override public void read(@NotNull FriendlyByteBuf buf) {
-            int length = buf.readVarInt();
-            int copy = Math.min(length, this.output.length);
-            for (int i = 0; i < length; i++) {
-                boolean flag = buf.readBoolean();
-                if (i < copy) this.output[i] = flag;
+
+        @Override public void sync(@NotNull FriendlyByteBuf buf) {
+            int len = this.input.length;
+            int byteLength = (len - len % 8) / 8 + 1;
+            byte[] bytes = new byte[byteLength];
+            int byteIndex = 0;
+            int bitIndex = 0;
+            for (int i = 0; i < len; i++) {
+                bytes[byteIndex] |= (byte) ((this.input[byteIndex * 8 + bitIndex] ? 1 : 0) << bitIndex++);
+                if (bitIndex == 8) {
+                    bitIndex = 0;
+                    byteIndex++;
+                }
             }
-            this.value = this.output.clone();
+            for (byte value : bytes) buf.writeByte(value);
+        }
+
+        @Override public void read(@NotNull FriendlyByteBuf buf) {
+            int len = this.output.length;
+            int byteLength = (len - len % 8) / 8 + 1;
+            byte[] bytes = new byte[byteLength];
+            for (int i = 0; i < bytes.length; i++) bytes[i] = buf.readByte();
+
+            int byteIndex = 0;
+            int bitIndex = 0;
+            for (int i = 0; i < len; i++) {
+                this.output[i] = ((bytes[byteIndex] >> bitIndex++) & 1) != 0;
+                if (bitIndex == 8) {
+                    bitIndex = 0;
+                    byteIndex++;
+                }
+            }
         }
     }
 }
