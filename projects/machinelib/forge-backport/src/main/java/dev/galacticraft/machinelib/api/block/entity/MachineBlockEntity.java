@@ -146,6 +146,38 @@ public abstract class MachineBlockEntity extends BlockEntity implements MenuProv
         buf.writeBlockPos(this.getBlockPos());
     }
 
+    /** MachineLib 0.3 flat-slot helper: move energy from an item into this machine. */
+    protected void chargeFromStack(int slotIndex) {
+        if (this.energyStorage.isFull() || slotIndex < 0 || slotIndex >= this.itemStorage.size()) return;
+        ItemResourceSlot slot = this.itemStorage.getSlot(slotIndex);
+        ItemStack stack = slot.toStack();
+        if (stack.isEmpty()) return;
+        IEnergyStorage source = stack.getCapability(ForgeCapabilities.ENERGY).orElse(null);
+        if (source == null || !source.canExtract()) return;
+        int requested = saturatingInt(this.energyStorage.tryInsert(this.getEnergyItemExtractionRate()));
+        int extracted = source.extractEnergy(requested, false);
+        if (extracted > 0) {
+            this.energyStorage.insert(extracted);
+            slot.setStack(stack);
+        }
+    }
+
+    /** MachineLib 0.3 flat-slot helper: move energy from this machine into an item. */
+    protected void drainPowerToStack(int slotIndex) {
+        if (this.energyStorage.isEmpty() || slotIndex < 0 || slotIndex >= this.itemStorage.size()) return;
+        ItemResourceSlot slot = this.itemStorage.getSlot(slotIndex);
+        ItemStack stack = slot.toStack();
+        if (stack.isEmpty()) return;
+        IEnergyStorage target = stack.getCapability(ForgeCapabilities.ENERGY).orElse(null);
+        if (target == null || !target.canReceive()) return;
+        int offered = saturatingInt(this.energyStorage.tryExtract(this.getEnergyItemInsertionRate()));
+        int accepted = target.receiveEnergy(offered, false);
+        if (accepted > 0) {
+            this.energyStorage.extract(accepted);
+            slot.setStack(stack);
+        }
+    }
+
     /** Move energy from this machine into the first item of the named transfer group. */
     protected void drainPowerToStack(@NotNull SlotGroupType type) {
         if (this.energyStorage.isEmpty()) return;
