@@ -72,6 +72,42 @@ public final class MachineItemStorageImpl implements MachineItemStorage {
         return true;
     }
 
+    @Override
+    public boolean canInsert(int start, int len, Item resource, CompoundTag tag, long amount) {
+        checkRange(start, len);
+        if (resource == null || amount < 0) return false;
+        long remaining = amount;
+        for (int i = start; i < start + len && remaining > 0; i++) {
+            remaining -= this.slots[i].tryInsert(resource, tag, remaining);
+        }
+        return remaining == 0;
+    }
+
+    @Override
+    public long insertMatching(int start, int len, Item resource, CompoundTag tag, long amount) {
+        checkRange(start, len);
+        if (resource == null || amount <= 0) return 0;
+        long remaining = amount;
+        long inserted = 0;
+
+        // MachineLib fills existing matching stacks before opening a new output stack.
+        for (int i = start; i < start + len && remaining > 0; i++) {
+            ItemResourceSlot slot = this.slots[i];
+            if (!slot.contains(resource, tag)) continue;
+            long current = slot.insert(resource, tag, remaining);
+            inserted += current;
+            remaining -= current;
+        }
+        for (int i = start; i < start + len && remaining > 0; i++) {
+            ItemResourceSlot slot = this.slots[i];
+            if (!slot.isEmpty()) continue;
+            long current = slot.insert(resource, tag, remaining);
+            inserted += current;
+            remaining -= current;
+        }
+        return inserted;
+    }
+
     @Override public boolean consumeOne(Item resource) { return consume(resource, 1) == 1; }
     @Override public boolean consumeOne(Item resource, CompoundTag tag) { return consume(resource, tag, 1) == 1; }
     @Override public long consume(Item resource, long amount) { return consume(resource, null, amount); }
@@ -99,7 +135,7 @@ public final class MachineItemStorageImpl implements MachineItemStorage {
     @Override public boolean consumeOne(int start, int len, Item resource, CompoundTag tag) { return consume(start, len, resource, tag, 1) == 1; }
     @Override public long consume(int start, int len, Item resource, long amount) { return consume(start, len, resource, null, amount); }
     @Override public long consume(int start, int len, Item resource, CompoundTag tag, long amount) {
-        if (start < 0 || len < 0 || start + len > this.slots.length) throw new IndexOutOfBoundsException();
+        checkRange(start, len);
         long remaining = Math.max(0, amount);
         long removed = 0;
         for (int i = start; i < start + len && remaining > 0; i++) {
@@ -133,6 +169,10 @@ public final class MachineItemStorageImpl implements MachineItemStorage {
     @Override public void setChanged() { this.markModified(); }
     @Override public boolean stillValid(Player player) { return true; }
     @Override public void clearContent() { for (ItemResourceSlot slot : this.slots) if (!slot.isEmpty()) slot.set(null, null, 0); }
+
+    private void checkRange(int start, int len) {
+        if (start < 0 || len < 0 || start + len > this.slots.length) throw new IndexOutOfBoundsException();
+    }
 
     private void markModified() {
         this.modifications++;
