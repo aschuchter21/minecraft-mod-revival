@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
-/** MachineLib 0.2-compatible grouped item storage backed by Forge item capabilities. */
+/** MachineLib 0.2/0.3-compatible grouped item storage backed by Forge item capabilities. */
 public interface MachineItemStorage extends Container, Iterable<ItemResourceSlot> {
     static MachineItemStorage create(ItemResourceSlot... slots) {
         return slots.length == 0 ? empty() : new MachineItemStorageImpl(slots);
@@ -46,6 +46,7 @@ public interface MachineItemStorage extends Container, Iterable<ItemResourceSlot
     ItemResourceSlot[] getSlots();
     ResourceFilter<Item> getStrictFilter(int slot);
     SlotGroup<Item, ItemStack, ItemResourceSlot> getGroup(SlotGroupType type);
+    long getModifications();
     void setListener(Runnable listener);
     IItemHandler getExposedStorage(ResourceFlow flow);
 
