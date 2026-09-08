@@ -83,10 +83,9 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.entity.IEntityAdditionalSpawnData;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.network.NetworkHooks;
-import net.minecraftforge.network.PlayMessages;
-import net.minecraftforge.network.IEntityAdditionalSpawnData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
@@ -203,7 +202,6 @@ public class RocketEntity extends Entity implements Rocket, IEntityAdditionalSpa
     public boolean hurt(DamageSource source, float amount) {
         if (!this.level().isClientSide && !this.isRemoved()) {
             if (this.isInvulnerableTo(source)) return false;
-
             this.entityData.set(DAMAGE_WOBBLE_SIDE, -this.entityData.get(DAMAGE_WOBBLE_SIDE));
             this.entityData.set(DAMAGE_WOBBLE_TICKS, 10);
             this.entityData.set(DAMAGE_WOBBLE_STRENGTH, this.entityData.get(DAMAGE_WOBBLE_STRENGTH) + amount * 10.0F);
@@ -400,7 +398,6 @@ public class RocketEntity extends Entity implements Rocket, IEntityAdditionalSpa
         this.setTimeAsState(this.getTimeAsState() + 1);
         super.tick();
         this.tickLerp();
-
         if (this.level().isClientSide()) return;
         ServerLevel serverLevel = (ServerLevel) this.level();
 
@@ -439,7 +436,6 @@ public class RocketEntity extends Entity implements Rocket, IEntityAdditionalSpa
                 }
                 return;
             }
-
             this.tank.extractInternal(FUEL_PER_TICK, false);
             if (this.getTimeAsState() >= 400) {
                 this.setLaunchStage(LaunchStage.LAUNCHED);
@@ -463,11 +459,9 @@ public class RocketEntity extends Entity implements Rocket, IEntityAdditionalSpa
                             this.level().random.nextDouble() - 0.5, -1,
                             this.level().random.nextDouble() - 0.5, 0.12000000596046448D);
                 }
-
                 this.setSpeed(Math.min(0.75F, this.getSpeed() + 0.05F));
                 this.applyRocketVelocity();
             }
-
             if (this.position().y() >= 1200.0F) {
                 this.reachOrbit();
                 return;
@@ -478,7 +472,6 @@ public class RocketEntity extends Entity implements Rocket, IEntityAdditionalSpa
         }
 
         this.move(MoverType.SELF, this.getDeltaMovement());
-
         if (this.getLaunchStage() == LaunchStage.FAILED) {
             this.setRot((this.getYRot() + this.level().random.nextFloat() - 0.5F * 8.0F) % 360.0F,
                     (this.getXRot() + this.level().random.nextFloat() - 0.5F * 8.0F) % 360.0F);
@@ -500,7 +493,6 @@ public class RocketEntity extends Entity implements Rocket, IEntityAdditionalSpa
                 this.remove(RemovalReason.KILLED);
             }
         }
-
         ++this.ticksSinceJump;
     }
 
@@ -534,7 +526,6 @@ public class RocketEntity extends Entity implements Rocket, IEntityAdditionalSpa
         int currentBodyId = current == null
                 ? -1
                 : this.level().registryAccess().registryOrThrow(AddonRegistries.CELESTIAL_BODY).getId(current);
-
         RocketData data = RocketData.create(this.color(), this.cone(), this.body(), this.fin(),
                 this.booster(), this.bottom(), this.upgrades());
         for (Entity passenger : this.getPassengers()) {
@@ -586,12 +577,10 @@ public class RocketEntity extends Entity implements Rocket, IEntityAdditionalSpa
         if (tag.contains("Fin")) this.setFin(new ResourceLocation(tag.getString("Fin")));
         if (tag.contains("Booster")) this.setBooster(new ResourceLocation(tag.getString("Booster")));
         if (tag.contains("Bottom")) this.setBottom(new ResourceLocation(tag.getString("Bottom")));
-
         ListTag list = tag.getList("Upgrades", Tag.TAG_STRING);
         ResourceLocation[] upgrades = new ResourceLocation[list.size()];
         for (int i = 0; i < list.size(); i++) upgrades[i] = new ResourceLocation(list.getString(i));
         this.setUpgrades(upgrades);
-
         if (tag.contains("Color")) this.setColor(tag.getInt("Color"));
         if (tag.contains("Stage")) this.setLaunchStage(LaunchStage.valueOf(tag.getString("Stage")));
         if (tag.contains("Speed")) this.setSpeed(tag.getFloat("Speed"));
@@ -619,7 +608,6 @@ public class RocketEntity extends Entity implements Rocket, IEntityAdditionalSpa
         tag.putInt("lX", this.linkedPad.getX());
         tag.putInt("lY", this.linkedPad.getY());
         tag.putInt("lZ", this.linkedPad.getZ());
-
         CompoundTag fuelTag = new CompoundTag();
         this.tank.save(fuelTag);
         if (!fuelTag.isEmpty()) tag.put("ForgeFuelTank", fuelTag);
