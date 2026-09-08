@@ -5,6 +5,7 @@
 package dev.galacticraft.forge;
 
 import com.mojang.logging.LogUtils;
+import dev.galacticraft.api.gas.Gases;
 import dev.galacticraft.api.registry.AddonRegistries;
 import dev.galacticraft.api.registry.BuiltInRocketRegistries;
 import dev.galacticraft.api.registry.RocketRegistries;
@@ -21,8 +22,10 @@ import dev.galacticraft.api.universe.celestialbody.landable.teleporter.Celestial
 import dev.galacticraft.api.universe.galaxy.Galaxy;
 import dev.galacticraft.impl.universe.BuiltinObjects;
 import dev.galacticraft.mod.Constant;
+import dev.galacticraft.mod.content.GCFluids;
 import dev.galacticraft.mod.content.entity.data.GCEntityDataSerializers;
 import dev.galacticraft.mod.data.gen.SatelliteChunkGenerator;
+import dev.galacticraft.mod.forge.fluid.ForgeGCFluidTypes;
 import dev.galacticraft.mod.forge.network.ForgeRocketNetworking;
 import net.minecraft.core.registries.Registries;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -82,10 +85,14 @@ public final class GalacticraftForgeBootstrap {
 
     /**
      * Loader-native replacements for the direct vanilla registrations performed by
-     * the Fabric API initializer. Forge's serializer registry keeps modded entity
-     * data IDs synchronized between logical sides.
+     * the Fabric API initializer. Forge's serializer and fluid-type registries keep
+     * modded IDs synchronized and ensure Fluid#getFluidType is valid at runtime.
      */
     private void registerForgeAndVanillaEntries(RegisterEvent event) {
+        ForgeGCFluidTypes.register(event);
+        Gases.register(event);
+        GCFluids.register(event);
+
         event.register(Registries.CHUNK_GENERATOR, Constant.id("satellite"),
                 () -> SatelliteChunkGenerator.CODEC);
 
