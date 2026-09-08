@@ -170,7 +170,7 @@ public class OxygenSealerBlockEntity extends MachineBlockEntity {
         profiler.push("extract");
         try {
             this.energyStorage().extract(energy);
-            oxygenTank.extract(Gases.OXYGEN, this.breathablePositions.size() * 2L);
+            oxygenTank.extract(this.breathablePositions.size() * 2L);
         } finally {
             profiler.pop();
         }
