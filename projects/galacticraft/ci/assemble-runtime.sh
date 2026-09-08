@@ -83,6 +83,11 @@ RUNTIME_JAR=$(find "$OUT_DIR/build/libs" -maxdepth 1 -type f \
 echo "Experimental Galacticraft runtime: $RUNTIME_JAR"
 echo "MachineLib runtime: $MACHINE_RUNTIME_JAR"
 
+# Snapshot the listing once. Besides making debugging easier, this avoids
+# pipefail/SIGPIPE false negatives from repeatedly piping `jar tf` into grep -q.
+JAR_ENTRIES="$OUT_DIR/runtime-jar-entries.txt"
+jar tf "$RUNTIME_JAR" > "$JAR_ENTRIES"
+
 # Assert that this is a real assembled runtime rather than the old skeleton jar.
 for entry in \
   'META-INF/mods.toml' \
@@ -91,16 +96,16 @@ for entry in \
   'dev/galacticraft/mod/content/GCBlocks.class' \
   'dev/galacticraft/mod/content/item/GCItems.class' \
   'dev/galacticraft/mod/content/entity/RocketEntity.class'; do
-  jar tf "$RUNTIME_JAR" | grep -qx "$entry" || {
+  grep -Fxq "$entry" "$JAR_ENTRIES" || {
     echo "Missing required runtime entry: $entry" >&2
     exit 1
   }
 done
 
-jar tf "$RUNTIME_JAR" | grep -q '^assets/galacticraft/'
-jar tf "$RUNTIME_JAR" | grep -q '^data/galacticraft/'
+grep -q '^assets/galacticraft/' "$JAR_ENTRIES"
+grep -q '^data/galacticraft/' "$JAR_ENTRIES"
 
-if jar tf "$RUNTIME_JAR" | grep -Eq '^(fabric\.mod\.json|galacticraft(-api)?\.mixins\.json|galacticraft\.accesswidener)$'; then
+if grep -Eq '^(fabric\.mod\.json|galacticraft(-api)?\.mixins\.json|galacticraft\.accesswidener)$' "$JAR_ENTRIES"; then
   echo 'Fabric-only loader metadata leaked into the Forge runtime jar.' >&2
   exit 1
 fi
