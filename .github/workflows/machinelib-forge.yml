@@ -48,6 +48,7 @@ jobs:
             dev/galacticraft/machinelib/impl/storage/MachineFluidStorageImpl.class \
             dev/galacticraft/machinelib/api/machine/MachineType.class \
             dev/galacticraft/machinelib/api/block/entity/MachineBlockEntity.class \
+            dev/galacticraft/machinelib/forge/compat/LegacyMachineBlockEntity.class \
             dev/galacticraft/machinelib/forge/item/ForgeItemStorageAdapter.class \
             dev/galacticraft/machinelib/forge/fluid/ForgeFluidStorageAdapter.class \
             dev/galacticraft/machinelib/forge/capability/ForgeMachineCapabilityBridge.class
