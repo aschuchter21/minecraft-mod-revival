@@ -18,16 +18,20 @@ Orbital Industries is a Forge 1.20.1 companion mod for Galacticraft focused on b
 - Java 17
 - Galacticraft integration is optional at the loader level during early development so the project can be built and tested independently.
 
-## Current milestone: Foundation
+## Current development state
 
-The first implementation provides:
+The mod now has a compiling persistent network foundation plus the first modular station implementation:
 
-- Forge project skeleton and metadata.
 - Mission Control Console block and block entity.
-- Persistent `SpaceNetworkSavedData` stored per server world.
-- Generic persistent space-network nodes for mission control, stations, colonies, orbital depots, satellites and industrial facilities.
-- Persistent cargo-route records.
-- A right-click Mission Control network summary so the foundation is testable in-game before the full GUI lands.
+- Server-wide `SpaceNetworkSavedData` shared across dimensions.
+- Persistent infrastructure nodes and cargo routes.
+- Station Controller with face-connected module discovery.
+- Habitation, Life Support, Docking Port, Solar Array and Cargo Storage modules.
+- Derived station budgets for crew capacity, power, oxygen, docking and cargo.
+- Persistent station state registered into the same network Mission Control uses.
+- Automatic cleanup when Mission Control or a Station Controller is removed.
+
+All block art is intentionally temporary developer art while the systems are being built.
 
 See `docs/ARCHITECTURE.md` and `docs/ROADMAP.md` for the planned systems.
 
