@@ -1,0 +1,1 @@
+{"type":"minecraft:crafting_shaped","pattern":["GGG","CRC","III"],"key":{"G":{"item":"minecraft:blue_stained_glass"},"C":{"item":"minecraft:copper_ingot"},"R":{"item":"minecraft:redstone_block"},"I":{"item":"minecraft:iron_ingot"}},"result":{"item":"orbitalindustries:solar_array","count":1}}

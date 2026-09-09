@@ -1,0 +1,1 @@
+{"type":"minecraft:crafting_shaped","pattern":["III","IPI","IRI"],"key":{"I":{"item":"minecraft:iron_ingot"},"P":{"item":"minecraft:piston"},"R":{"item":"minecraft:redstone"}},"result":{"item":"orbitalindustries:docking_port","count":1}}
