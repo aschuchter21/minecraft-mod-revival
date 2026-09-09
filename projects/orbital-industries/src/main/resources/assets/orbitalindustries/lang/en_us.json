@@ -1,3 +1,9 @@
 {
-  "block.orbitalindustries.mission_control_console": "Mission Control Console"
+  "block.orbitalindustries.mission_control_console": "Mission Control Console",
+  "block.orbitalindustries.station_controller": "Station Controller",
+  "block.orbitalindustries.habitation_module": "Habitation Module",
+  "block.orbitalindustries.life_support_module": "Life Support Module",
+  "block.orbitalindustries.docking_port": "Docking Port",
+  "block.orbitalindustries.solar_array": "Station Solar Array",
+  "block.orbitalindustries.cargo_storage_module": "Cargo Storage Module"
 }

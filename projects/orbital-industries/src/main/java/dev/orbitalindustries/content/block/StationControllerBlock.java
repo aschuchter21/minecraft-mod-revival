@@ -1,6 +1,6 @@
 package dev.orbitalindustries.content.block;
 
-import dev.orbitalindustries.content.block.entity.MissionControlBlockEntity;
+import dev.orbitalindustries.content.block.entity.StationControllerBlockEntity;
 import dev.orbitalindustries.network.SpaceNetworkSavedData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -16,8 +16,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
-public final class MissionControlBlock extends BaseEntityBlock {
-    public MissionControlBlock(Properties properties) {
+public final class StationControllerBlock extends BaseEntityBlock {
+    public StationControllerBlock(Properties properties) {
         super(properties);
     }
 
@@ -29,7 +29,7 @@ public final class MissionControlBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new MissionControlBlockEntity(pos, state);
+        return new StationControllerBlockEntity(pos, state);
     }
 
     @Override
@@ -37,8 +37,8 @@ public final class MissionControlBlock extends BaseEntityBlock {
                                  InteractionHand hand, BlockHitResult hit) {
         if (level instanceof ServerLevel serverLevel) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
-            if (blockEntity instanceof MissionControlBlockEntity missionControl) {
-                player.sendSystemMessage(Component.literal("Orbital Industries • " + missionControl.ensureRegistered(serverLevel)));
+            if (blockEntity instanceof StationControllerBlockEntity controller) {
+                player.sendSystemMessage(Component.literal("Orbital Industries • " + controller.scanAndRegister(serverLevel)));
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
@@ -48,8 +48,8 @@ public final class MissionControlBlock extends BaseEntityBlock {
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
-            if (level instanceof ServerLevel serverLevel && blockEntity instanceof MissionControlBlockEntity missionControl) {
-                SpaceNetworkSavedData.get(serverLevel).removeNode(missionControl.getNodeId());
+            if (level instanceof ServerLevel serverLevel && blockEntity instanceof StationControllerBlockEntity controller) {
+                SpaceNetworkSavedData.get(serverLevel).removeNode(controller.getNodeId());
             }
             super.onRemove(state, level, pos, newState, isMoving);
         }

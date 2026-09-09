@@ -1,6 +1,12 @@
 {
   "replace": false,
   "values": [
-    "orbitalindustries:mission_control_console"
+    "orbitalindustries:mission_control_console",
+    "orbitalindustries:station_controller",
+    "orbitalindustries:habitation_module",
+    "orbitalindustries:life_support_module",
+    "orbitalindustries:docking_port",
+    "orbitalindustries:solar_array",
+    "orbitalindustries:cargo_storage_module"
   ]
 }

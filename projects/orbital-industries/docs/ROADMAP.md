@@ -9,6 +9,7 @@
 - [x] Persistent infrastructure node model.
 - [x] Persistent cargo-route model.
 - [x] Initial in-game network summary.
+- [x] Clean GitHub Actions build and jar artifact.
 
 ## Milestone 1 — Mission Control
 
@@ -21,14 +22,18 @@
 
 ## Milestone 2 — Modular Space Stations
 
-- Station Controller.
-- Structural/module discovery.
-- Habitation module.
-- Life Support module.
-- Docking Port.
-- Cargo Storage module.
-- Solar Array / station power budget.
-- Station status in Mission Control.
+- [x] Station Controller foundation.
+- [x] Connected module discovery.
+- [x] Habitation module.
+- [x] Life Support module.
+- [x] Docking Port foundation.
+- [x] Cargo Storage module foundation.
+- [x] Solar Array / station power budget foundation.
+- [x] Persistent station status model.
+- Station status cards in Mission Control GUI.
+- Real energy, oxygen and inventory capabilities.
+- Docked vehicle tracking.
+- Structural validation and ownership rules.
 
 ## Milestone 3 — Orbital Infrastructure
 

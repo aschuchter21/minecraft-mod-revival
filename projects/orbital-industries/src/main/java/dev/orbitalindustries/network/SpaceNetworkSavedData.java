@@ -1,6 +1,7 @@
 package dev.orbitalindustries.network;
 
 import dev.orbitalindustries.OrbitalIndustries;
+import dev.orbitalindustries.station.StationState;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -17,6 +18,7 @@ public final class SpaceNetworkSavedData extends SavedData {
 
     private final Map<UUID, SpaceNetworkNode> nodes = new LinkedHashMap<>();
     private final Map<UUID, CargoRoute> routes = new LinkedHashMap<>();
+    private final Map<UUID, StationState> stations = new LinkedHashMap<>();
 
     public static SpaceNetworkSavedData get(ServerLevel level) {
         ServerLevel storageLevel = level.getServer().overworld();
@@ -32,8 +34,20 @@ public final class SpaceNetworkSavedData extends SavedData {
         setDirty();
     }
 
+    public void removeNode(UUID nodeId) {
+        nodes.remove(nodeId);
+        stations.remove(nodeId);
+        routes.values().removeIf(route -> route.originNodeId().equals(nodeId) || route.destinationNodeId().equals(nodeId));
+        setDirty();
+    }
+
     public void upsertRoute(CargoRoute route) {
         routes.put(route.id(), route);
+        setDirty();
+    }
+
+    public void upsertStation(StationState station) {
+        stations.put(station.nodeId(), station);
         setDirty();
     }
 
@@ -43,6 +57,10 @@ public final class SpaceNetworkSavedData extends SavedData {
 
     public Collection<CargoRoute> routes() {
         return routes.values();
+    }
+
+    public Collection<StationState> stations() {
+        return stations.values();
     }
 
     public long count(NetworkNodeType type) {
@@ -70,6 +88,12 @@ public final class SpaceNetworkSavedData extends SavedData {
             routeList.add(route.save());
         }
         tag.put("Routes", routeList);
+
+        ListTag stationList = new ListTag();
+        for (StationState station : stations.values()) {
+            stationList.add(station.save());
+        }
+        tag.put("Stations", stationList);
         return tag;
     }
 
@@ -86,6 +110,12 @@ public final class SpaceNetworkSavedData extends SavedData {
         for (int i = 0; i < routeList.size(); i++) {
             CargoRoute route = CargoRoute.load(routeList.getCompound(i));
             data.routes.put(route.id(), route);
+        }
+
+        ListTag stationList = tag.getList("Stations", Tag.TAG_COMPOUND);
+        for (int i = 0; i < stationList.size(); i++) {
+            StationState station = StationState.load(stationList.getCompound(i));
+            data.stations.put(station.nodeId(), station);
         }
 
         return data;
