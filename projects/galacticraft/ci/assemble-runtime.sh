@@ -85,6 +85,37 @@ if "net.fabricmc.fabric.api.registry" in source:
 out_path.write_text(source)
 PY
 
+# GCItems is likewise loader-neutral except for FabricItemSettings on the three
+# air-lock BlockItems. FabricItemSettings only supplied the ordinary item
+# properties here, so use Minecraft's Item.Properties directly on Forge.
+GC_ITEMS_UPSTREAM="$UPSTREAM_GC/src/main/java/dev/galacticraft/mod/content/item/GCItems.java"
+GC_ITEMS_FORGE="$RUNTIME_SRC/dev/galacticraft/mod/content/item/GCItems.java"
+mkdir -p "$(dirname "$GC_ITEMS_FORGE")"
+python3 - "$GC_ITEMS_UPSTREAM" "$GC_ITEMS_FORGE" <<'PY'
+from pathlib import Path
+import sys
+
+source_path = Path(sys.argv[1])
+out_path = Path(sys.argv[2])
+source = source_path.read_text()
+
+fabric_import = "import net.fabricmc.fabric.api.item.v1.FabricItemSettings;\n"
+if fabric_import not in source:
+    raise SystemExit("Expected FabricItemSettings import not found in recovered GCItems source")
+source = source.replace(fabric_import, "", 1)
+
+settings_call = "new FabricItemSettings()"
+settings_count = source.count(settings_call)
+if settings_count != 3:
+    raise SystemExit(f"Expected exactly 3 FabricItemSettings usages in recovered GCItems, found {settings_count}")
+source = source.replace(settings_call, "new Item.Properties()")
+
+if "net.fabricmc.fabric.api.item" in source or "FabricItemSettings" in source:
+    raise SystemExit("Fabric item API still referenced by generated Forge GCItems source")
+
+out_path.write_text(source)
+PY
+
 # The support jar contains the recovered upstream implementation. Extract it so
 # loader-neutral classes remain available to the Forge runtime.
 (
@@ -192,10 +223,15 @@ RUNTIME_JAR=$(find "$OUT_DIR/build/libs" -maxdepth 1 -type f \
 # Recovered classes should now be physically staged beside compiled overlays,
 # rather than represented as an auxiliary SourceSet output directory.
 [[ -f "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/GCBlocks.class" ]]
+[[ -f "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/item/GCItems.class" ]]
 [[ -f "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/block/entity/RocketWorkbenchBlockEntity.class" ]]
 
 if strings "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/GCBlocks.class" | grep -q 'net/fabricmc/fabric/api/registry'; then
   echo 'Fabric registry API leaked into Forge GCBlocks.class.' >&2
+  exit 1
+fi
+if strings "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/item/GCItems.class" | grep -Eq 'net/fabricmc/fabric/api/item|FabricItemSettings'; then
+  echo 'Fabric item API leaked into Forge GCItems.class.' >&2
   exit 1
 fi
 
