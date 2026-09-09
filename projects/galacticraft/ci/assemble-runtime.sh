@@ -116,6 +116,51 @@ if "net.fabricmc.fabric.api.item" in source or "FabricItemSettings" in source:
 out_path.write_text(source)
 PY
 
+# GCBlockEntityTypes used FabricBlockEntityTypeBuilder solely as a thin wrapper
+# around Minecraft's own BlockEntityType.Builder. Rebuild the exact recovered
+# declarations with the vanilla builder so the Forge runtime has no Fabric ABI
+# dependency at this registry boundary.
+GC_BE_TYPES_UPSTREAM="$UPSTREAM_GC/src/main/java/dev/galacticraft/mod/content/GCBlockEntityTypes.java"
+GC_BE_TYPES_FORGE="$RUNTIME_SRC/dev/galacticraft/mod/content/GCBlockEntityTypes.java"
+mkdir -p "$(dirname "$GC_BE_TYPES_FORGE")"
+python3 - "$GC_BE_TYPES_UPSTREAM" "$GC_BE_TYPES_FORGE" <<'PY'
+from pathlib import Path
+import sys
+
+source_path = Path(sys.argv[1])
+out_path = Path(sys.argv[2])
+source = source_path.read_text()
+
+fabric_import = "import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;\n"
+if fabric_import not in source:
+    raise SystemExit("Expected FabricBlockEntityTypeBuilder import not found in recovered GCBlockEntityTypes source")
+source = source.replace(fabric_import, "", 1)
+
+builder_call = "FabricBlockEntityTypeBuilder.create("
+builder_count = source.count(builder_call)
+if builder_count < 1:
+    raise SystemExit("No FabricBlockEntityTypeBuilder declarations found in recovered GCBlockEntityTypes")
+
+build_count = source.count(".build();")
+if build_count != builder_count:
+    raise SystemExit(
+        f"Unexpected GCBlockEntityTypes builder shape: {builder_count} create calls but {build_count} build calls"
+    )
+
+source = source.replace(builder_call, "BlockEntityType.Builder.of(")
+source = source.replace(".build();", ".build(null);")
+
+if "FabricBlockEntityTypeBuilder" in source or "net.fabricmc.fabric.api.object.builder" in source:
+    raise SystemExit("Fabric block-entity builder API still referenced by generated Forge GCBlockEntityTypes source")
+
+out_path.write_text(source)
+PY
+
+# All known server-side uses of the temporary Fabric migration ABI have now been
+# replaced by native Forge/vanilla code. Do not compile those compatibility shim
+# packages into the runtime at all.
+rm -rf "$RUNTIME_SRC/net/fabricmc"
+
 # The support jar contains the recovered upstream implementation. Extract it so
 # loader-neutral classes remain available to the Forge runtime.
 (
@@ -224,6 +269,7 @@ RUNTIME_JAR=$(find "$OUT_DIR/build/libs" -maxdepth 1 -type f \
 # rather than represented as an auxiliary SourceSet output directory.
 [[ -f "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/GCBlocks.class" ]]
 [[ -f "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/item/GCItems.class" ]]
+[[ -f "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/GCBlockEntityTypes.class" ]]
 [[ -f "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/block/entity/RocketWorkbenchBlockEntity.class" ]]
 
 if strings "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/GCBlocks.class" | grep -q 'net/fabricmc/fabric/api/registry'; then
@@ -232,6 +278,10 @@ if strings "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/GCBloc
 fi
 if strings "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/item/GCItems.class" | grep -Eq 'net/fabricmc/fabric/api/item|FabricItemSettings'; then
   echo 'Fabric item API leaked into Forge GCItems.class.' >&2
+  exit 1
+fi
+if strings "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/GCBlockEntityTypes.class" | grep -Eq 'net/fabricmc/fabric/api/object/builder|FabricBlockEntityTypeBuilder'; then
+  echo 'Fabric block-entity builder API leaked into Forge GCBlockEntityTypes.class.' >&2
   exit 1
 fi
 
@@ -252,6 +302,7 @@ for entry in \
   'dev/galacticraft/api/registry/BuiltInAddonRegistries.class' \
   'dev/galacticraft/mod/content/GCBlocks.class' \
   'dev/galacticraft/mod/content/item/GCItems.class' \
+  'dev/galacticraft/mod/content/GCBlockEntityTypes.class' \
   'dev/galacticraft/mod/content/entity/RocketEntity.class' \
   'dev/galacticraft/mod/content/block/entity/RocketWorkbenchBlockEntity.class' \
   'dev/galacticraft/mod/screen/GCMenuTypes.class'; do
@@ -266,6 +317,12 @@ grep -q '^data/galacticraft/' "$JAR_ENTRIES"
 
 if grep -Eq '^(fabric\.mod\.json|galacticraft(-api)?\.mixins\.json|galacticraft\.accesswidener)$' "$JAR_ENTRIES"; then
   echo 'Fabric-only loader metadata leaked into the Forge runtime jar.' >&2
+  exit 1
+fi
+
+if grep -q '^net/fabricmc/' "$JAR_ENTRIES"; then
+  echo 'Fabric compatibility shim classes leaked into the Forge runtime jar:' >&2
+  grep '^net/fabricmc/' "$JAR_ENTRIES" >&2
   exit 1
 fi
 
