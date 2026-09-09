@@ -1,0 +1,33 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="orbitalindustries"
+version="${file.jarVersion}"
+displayName="Orbital Industries"
+authors="aschuchter21"
+description='''
+Build a space civilization: expanded stations, orbital infrastructure, interplanetary logistics, colonies and industry, tied together by Mission Control.
+'''
+
+[[dependencies.orbitalindustries]]
+modId="forge"
+mandatory=true
+versionRange="[47.4.10,48)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.orbitalindustries]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.orbitalindustries]]
+modId="galacticraft"
+mandatory=false
+versionRange="[0,)"
+ordering="AFTER"
+side="BOTH"

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "IRI",
+    "RCR",
+    "III"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "R": { "item": "minecraft:redstone" },
+    "C": { "item": "minecraft:comparator" }
+  },
+  "result": {
+    "item": "orbitalindustries:mission_control_console",
+    "count": 1
+  }
+}
