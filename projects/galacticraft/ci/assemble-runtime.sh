@@ -10,6 +10,7 @@ UPSTREAM_GC="${2:-Galacticraft}"
 SUPPORT_JAR="${3:-gc-1.20.1-support.jar}"
 OUT_DIR="${4:-ForgeRuntimeValidation}"
 OVERLAY_SRC="$REVIVAL_ROOT/projects/galacticraft/forge-overlays/src/main/java"
+RUNTIME_SRC="$OUT_DIR/src/main/java"
 
 MACHINE_BUILD="$REVIVAL_ROOT/projects/machinelib/forge-backport/build/libs"
 MACHINE_DEV_JAR="$MACHINE_BUILD/MachineLib-Forge-1.20.1-dev.jar"
@@ -31,7 +32,58 @@ cp "$MACHINE_DEV_JAR" "$OUT_DIR/libs/machinelib-forge-dev.jar"
 cp "$MACHINE_RUNTIME_JAR" "$OUT_DIR/libs/machinelib-forge-runtime.jar"
 
 # Forge-port sources are compiled as the primary implementation.
-cp -R "$OVERLAY_SRC/." "$OUT_DIR/src/main/java/"
+cp -R "$OVERLAY_SRC/." "$RUNTIME_SRC/"
+
+# GCBlocks is still mostly loader-neutral upstream code, but its Fabric content
+# registry calls are loader boundaries. Generate the Forge source from the exact
+# recovered 1.20.1 source and replace those calls with native Forge/vanilla
+# behavior. Moon dirt flattening is handled by GalacticraftForgeBlockHooks.
+GC_BLOCKS_UPSTREAM="$UPSTREAM_GC/src/main/java/dev/galacticraft/mod/content/GCBlocks.java"
+GC_BLOCKS_FORGE="$RUNTIME_SRC/dev/galacticraft/mod/content/GCBlocks.java"
+mkdir -p "$(dirname "$GC_BLOCKS_FORGE")"
+python3 - "$GC_BLOCKS_UPSTREAM" "$GC_BLOCKS_FORGE" <<'PY'
+from pathlib import Path
+import sys
+
+source_path = Path(sys.argv[1])
+out_path = Path(sys.argv[2])
+source = source_path.read_text()
+
+replacements = [
+    ("import net.fabricmc.fabric.api.registry.FlammableBlockRegistry;\n", ""),
+    ("import net.fabricmc.fabric.api.registry.FlattenableBlockRegistry;\n", ""),
+    (
+        "        FlammableBlockRegistry.getDefaultInstance().add(FUEL, 80, 130);",
+        "        ((FireBlock) Blocks.FIRE).setFlammable(FUEL, 80, 130);",
+    ),
+    (
+        "        FlammableBlockRegistry.getDefaultInstance().add(CRUDE_OIL, 60, 100);",
+        "        ((FireBlock) Blocks.FIRE).setFlammable(CRUDE_OIL, 60, 100);",
+    ),
+    (
+        "        FlammableBlockRegistry.getDefaultInstance().add(CAVERNOUS_VINES, 15, 60);",
+        "        ((FireBlock) Blocks.FIRE).setFlammable(CAVERNOUS_VINES, 15, 60);",
+    ),
+    (
+        "        FlammableBlockRegistry.getDefaultInstance().add(CAVERNOUS_VINES_PLANT, 15, 60);",
+        "        ((FireBlock) Blocks.FIRE).setFlammable(CAVERNOUS_VINES_PLANT, 15, 60);",
+    ),
+    (
+        "        FlattenableBlockRegistry.register(MOON_DIRT, MOON_DIRT_PATH.defaultBlockState());\n",
+        "",
+    ),
+]
+
+for old, new in replacements:
+    if old not in source:
+        raise SystemExit(f"Expected GCBlocks Forge-port source pattern not found: {old!r}")
+    source = source.replace(old, new, 1)
+
+if "net.fabricmc.fabric.api.registry" in source:
+    raise SystemExit("Fabric registry API still referenced by generated Forge GCBlocks source")
+
+out_path.write_text(source)
+PY
 
 # The support jar contains the recovered upstream implementation. Extract it so
 # loader-neutral classes remain available to the Forge runtime.
@@ -41,12 +93,12 @@ cp -R "$OVERLAY_SRC/." "$OUT_DIR/src/main/java/"
 )
 
 # IMPORTANT: never leave two definitions of a source-ported class on the runtime
-# classpath. Remove every recovered class that has a Forge overlay source,
+# classpath. Remove every recovered class that has a Forge runtime source,
 # including compiler-generated nested/anonymous classes. The freshly compiled
-# overlay is then the sole runtime definition.
+# Forge source is then the sole runtime definition.
 REMOVED_OVERLAY_CLASSES=0
 while IFS= read -r source; do
-  rel="${source#"$OVERLAY_SRC/"}"
+  rel="${source#"$RUNTIME_SRC/"}"
   stem="${rel%.java}"
   class_file="$OUT_DIR/upstream-classes/$stem.class"
   class_dir=$(dirname "$class_file")
@@ -63,27 +115,27 @@ while IFS= read -r source; do
       REMOVED_OVERLAY_CLASSES=$((REMOVED_OVERLAY_CLASSES + 1))
     done < <(find "$class_dir" -maxdepth 1 -type f -name "${class_base}\$*.class" -print)
   fi
-done < <(find "$OVERLAY_SRC" -type f -name '*.java' -print | sort)
+done < <(find "$RUNTIME_SRC" -type f -name '*.java' -print | sort)
 
-echo "Removed $REMOVED_OVERLAY_CLASSES recovered class files superseded by Forge overlays."
+echo "Removed $REMOVED_OVERLAY_CLASSES recovered class files superseded by Forge runtime sources."
 
 # Fail assembly immediately if any recovered duplicate survives the pruning pass.
 while IFS= read -r source; do
-  rel="${source#"$OVERLAY_SRC/"}"
+  rel="${source#"$RUNTIME_SRC/"}"
   stem="${rel%.java}"
   class_file="$OUT_DIR/upstream-classes/$stem.class"
   class_dir=$(dirname "$class_file")
   class_base=$(basename "$stem")
 
   if [[ -f "$class_file" ]]; then
-    echo "Recovered duplicate survived for Forge overlay: $rel" >&2
+    echo "Recovered duplicate survived for Forge runtime source: $rel" >&2
     exit 1
   fi
   if [[ -d "$class_dir" ]] && find "$class_dir" -maxdepth 1 -type f -name "${class_base}\$*.class" -print -quit | grep -q .; then
-    echo "Recovered nested duplicate survived for Forge overlay: $rel" >&2
+    echo "Recovered nested duplicate survived for Forge runtime source: $rel" >&2
     exit 1
   fi
-done < <(find "$OVERLAY_SRC" -type f -name '*.java' -print | sort)
+done < <(find "$RUNTIME_SRC" -type f -name '*.java' -print | sort)
 
 # Bring over only loader-neutral game resources for the first runtime test.
 # Fabric metadata, access widener and Fabric mixin configs are deliberately not
@@ -113,7 +165,11 @@ tasks.named('compileJava') {
 
 dependencies {
     compileOnly files('libs/gc-1.20.1-support.jar', 'libs/machinelib-forge-dev.jar')
-    runtimeOnly files('libs/machinelib-forge-runtime.jar')
+
+    // ModDev userdev runs in Mojmap. The production MachineLib jar is already
+    // reobfuscated to SRG and must never be placed on the development runServer
+    // classpath; the real production smoke installs that jar separately.
+    runtimeOnly files('libs/machinelib-forge-dev.jar')
 }
 
 tasks.named('jar') {
@@ -122,7 +178,7 @@ tasks.named('jar') {
 GRADLE
 
 echo '--- Runtime overlay sources ---'
-find "$OUT_DIR/src/main/java" -type f -name '*.java' -printf '%P\n' | sort
+find "$RUNTIME_SRC" -type f -name '*.java' -printf '%P\n' | sort
 
 echo '--- Runtime libraries ---'
 find "$OUT_DIR/libs" -maxdepth 1 -type f -printf '%f\n' | sort
@@ -138,6 +194,11 @@ RUNTIME_JAR=$(find "$OUT_DIR/build/libs" -maxdepth 1 -type f \
 [[ -f "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/GCBlocks.class" ]]
 [[ -f "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/block/entity/RocketWorkbenchBlockEntity.class" ]]
 
+if strings "$OUT_DIR/build/classes/java/main/dev/galacticraft/mod/content/GCBlocks.class" | grep -q 'net/fabricmc/fabric/api/registry'; then
+  echo 'Fabric registry API leaked into Forge GCBlocks.class.' >&2
+  exit 1
+fi
+
 echo "Experimental Galacticraft runtime: $RUNTIME_JAR"
 echo "MachineLib runtime: $MACHINE_RUNTIME_JAR"
 
@@ -151,6 +212,7 @@ for entry in \
   'META-INF/mods.toml' \
   'META-INF/accesstransformer.cfg' \
   'dev/galacticraft/forge/GalacticraftForgeBootstrap.class' \
+  'dev/galacticraft/forge/GalacticraftForgeBlockHooks.class' \
   'dev/galacticraft/api/registry/BuiltInAddonRegistries.class' \
   'dev/galacticraft/mod/content/GCBlocks.class' \
   'dev/galacticraft/mod/content/item/GCItems.class' \
