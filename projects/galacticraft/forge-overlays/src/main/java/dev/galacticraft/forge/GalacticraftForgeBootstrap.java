@@ -34,6 +34,7 @@ import dev.galacticraft.mod.forge.fluid.ForgeGCFluidTypes;
 import dev.galacticraft.mod.forge.network.ForgeRocketNetworking;
 import dev.galacticraft.mod.screen.GCMenuTypes;
 import net.minecraft.core.registries.Registries;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
@@ -59,6 +60,9 @@ public final class GalacticraftForgeBootstrap {
         modBus.addListener(this::registerDataPackRegistries);
         modBus.addListener(this::registerForgeAndVanillaEntries);
         modBus.addListener(this::registerEntityAttributes);
+
+        // Runtime gameplay hooks belong on Forge's main event bus, not the mod lifecycle bus.
+        MinecraftForge.EVENT_BUS.addListener(GalacticraftForgeBlockHooks::onBlockToolModification);
 
         ForgeRocketNetworking.register();
         LOGGER.info("Galacticraft Forge 1.20.1 runtime bootstrap loaded");
