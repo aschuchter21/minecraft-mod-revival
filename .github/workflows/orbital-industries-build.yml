@@ -1,0 +1,39 @@
+name: Build Orbital Industries 1.20.1
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - orbital-industries-foundation
+    paths:
+      - '.github/workflows/orbital-industries-build.yml'
+      - 'projects/orbital-industries/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.8'
+
+      - name: Build Orbital Industries
+        working-directory: projects/orbital-industries
+        run: gradle --no-daemon clean build --stacktrace
+
+      - name: Upload built jars
+        uses: actions/upload-artifact@v4
+        with:
+          name: OrbitalIndustries-1.20.1-Forge47.4.10
+          path: projects/orbital-industries/build/libs/*.jar
+          if-no-files-found: error
