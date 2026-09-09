@@ -34,10 +34,11 @@
 - [x] Solar Array / station power budget foundation.
 - [x] Persistent station status model.
 - [x] Derived operational health states for incomplete/power/oxygen failures.
+- [x] Persistent module ownership claims and overlap rejection.
 - Station status cards in Mission Control GUI.
 - Real energy, oxygen and inventory capabilities.
 - Docked vehicle tracking.
-- Structural validation and ownership rules.
+- Richer structural validation rules.
 
 ## Milestone 3 — Orbital Infrastructure
 

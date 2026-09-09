@@ -15,8 +15,10 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -36,10 +38,16 @@ public final class StationControllerBlockEntity extends BlockEntity {
     }
 
     public String scanAndRegister(ServerLevel level) {
-        Map<StationModuleType, Integer> modules = discoverModules(level);
-        StationState station = StationState.fromModules(nodeId, "Orbital Station", modules);
-
+        ScanResult scan = discoverModules(level);
         SpaceNetworkSavedData network = SpaceNetworkSavedData.get(level);
+
+        var conflict = network.findStationModuleConflict(nodeId, level.dimension().location(), scan.positions());
+        if (conflict.isPresent()) {
+            return "STRUCTURAL CONFLICT | A connected module is already assigned to station "
+                    + conflict.get().toString().substring(0, 8);
+        }
+
+        StationState station = StationState.fromModules(nodeId, "Orbital Station", scan.modules());
         network.upsertNode(new SpaceNetworkNode(
                 nodeId,
                 NetworkNodeType.STATION,
@@ -49,11 +57,13 @@ public final class StationControllerBlockEntity extends BlockEntity {
                 1
         ));
         network.upsertStation(station);
+        network.replaceStationModuleClaims(nodeId, level.dimension().location(), scan.positions());
         return station.summary();
     }
 
-    private Map<StationModuleType, Integer> discoverModules(ServerLevel level) {
+    private ScanResult discoverModules(ServerLevel level) {
         EnumMap<StationModuleType, Integer> counts = new EnumMap<>(StationModuleType.class);
+        List<BlockPos> positions = new ArrayList<>();
         ArrayDeque<BlockPos> open = new ArrayDeque<>();
         Set<BlockPos> visited = new HashSet<>();
 
@@ -74,6 +84,7 @@ public final class StationControllerBlockEntity extends BlockEntity {
             }
 
             counts.merge(moduleBlock.getModuleType(), 1, Integer::sum);
+            positions.add(current.immutable());
             modulesFound++;
 
             for (Direction direction : Direction.values()) {
@@ -81,7 +92,7 @@ public final class StationControllerBlockEntity extends BlockEntity {
             }
         }
 
-        return counts;
+        return new ScanResult(counts, List.copyOf(positions));
     }
 
     private boolean withinScanBounds(BlockPos pos) {
@@ -102,5 +113,8 @@ public final class StationControllerBlockEntity extends BlockEntity {
         if (tag.hasUUID("NetworkNodeId")) {
             nodeId = tag.getUUID("NetworkNodeId");
         }
+    }
+
+    private record ScanResult(Map<StationModuleType, Integer> modules, List<BlockPos> positions) {
     }
 }

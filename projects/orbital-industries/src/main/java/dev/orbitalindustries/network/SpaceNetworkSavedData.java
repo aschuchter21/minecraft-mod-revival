@@ -1,16 +1,20 @@
 package dev.orbitalindustries.network;
 
 import dev.orbitalindustries.OrbitalIndustries;
+import dev.orbitalindustries.station.StationModuleClaim;
 import dev.orbitalindustries.station.StationState;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 public final class SpaceNetworkSavedData extends SavedData {
@@ -19,6 +23,7 @@ public final class SpaceNetworkSavedData extends SavedData {
     private final Map<UUID, SpaceNetworkNode> nodes = new LinkedHashMap<>();
     private final Map<UUID, CargoRoute> routes = new LinkedHashMap<>();
     private final Map<UUID, StationState> stations = new LinkedHashMap<>();
+    private final Map<String, StationModuleClaim> stationModuleClaims = new LinkedHashMap<>();
 
     public static SpaceNetworkSavedData get(ServerLevel level) {
         ServerLevel storageLevel = level.getServer().overworld();
@@ -38,6 +43,7 @@ public final class SpaceNetworkSavedData extends SavedData {
         nodes.remove(nodeId);
         stations.remove(nodeId);
         routes.values().removeIf(route -> route.originNodeId().equals(nodeId) || route.destinationNodeId().equals(nodeId));
+        stationModuleClaims.values().removeIf(claim -> claim.stationNodeId().equals(nodeId));
         setDirty();
     }
 
@@ -48,6 +54,27 @@ public final class SpaceNetworkSavedData extends SavedData {
 
     public void upsertStation(StationState station) {
         stations.put(station.nodeId(), station);
+        setDirty();
+    }
+
+    public Optional<UUID> findStationModuleConflict(UUID stationNodeId, ResourceLocation dimension,
+                                                    Collection<BlockPos> modulePositions) {
+        for (BlockPos pos : modulePositions) {
+            StationModuleClaim claim = stationModuleClaims.get(StationModuleClaim.key(dimension, pos));
+            if (claim != null && !claim.stationNodeId().equals(stationNodeId)) {
+                return Optional.of(claim.stationNodeId());
+            }
+        }
+        return Optional.empty();
+    }
+
+    public void replaceStationModuleClaims(UUID stationNodeId, ResourceLocation dimension,
+                                           Collection<BlockPos> modulePositions) {
+        stationModuleClaims.values().removeIf(claim -> claim.stationNodeId().equals(stationNodeId));
+        for (BlockPos pos : modulePositions) {
+            StationModuleClaim claim = new StationModuleClaim(dimension, pos.immutable(), stationNodeId);
+            stationModuleClaims.put(claim.key(), claim);
+        }
         setDirty();
     }
 
@@ -111,6 +138,12 @@ public final class SpaceNetworkSavedData extends SavedData {
             stationList.add(station.save());
         }
         tag.put("Stations", stationList);
+
+        ListTag claimList = new ListTag();
+        for (StationModuleClaim claim : stationModuleClaims.values()) {
+            claimList.add(claim.save());
+        }
+        tag.put("StationModuleClaims", claimList);
         return tag;
     }
 
@@ -133,6 +166,12 @@ public final class SpaceNetworkSavedData extends SavedData {
         for (int i = 0; i < stationList.size(); i++) {
             StationState station = StationState.load(stationList.getCompound(i));
             data.stations.put(station.nodeId(), station);
+        }
+
+        ListTag claimList = tag.getList("StationModuleClaims", Tag.TAG_COMPOUND);
+        for (int i = 0; i < claimList.size(); i++) {
+            StationModuleClaim claim = StationModuleClaim.load(claimList.getCompound(i));
+            data.stationModuleClaims.put(claim.key(), claim);
         }
 
         return data;
