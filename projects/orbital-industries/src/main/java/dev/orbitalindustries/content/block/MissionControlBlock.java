@@ -3,8 +3,8 @@ package dev.orbitalindustries.content.block;
 import dev.orbitalindustries.content.block.entity.MissionControlBlockEntity;
 import dev.orbitalindustries.network.SpaceNetworkSavedData;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -14,6 +14,7 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.Nullable;
 
 public final class MissionControlBlock extends BaseEntityBlock {
@@ -35,10 +36,11 @@ public final class MissionControlBlock extends BaseEntityBlock {
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
                                  InteractionHand hand, BlockHitResult hit) {
-        if (level instanceof ServerLevel serverLevel) {
+        if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof MissionControlBlockEntity missionControl) {
-                player.sendSystemMessage(Component.literal("Orbital Industries • " + missionControl.ensureRegistered(serverLevel)));
+                missionControl.ensureRegistered(serverLevel);
+                NetworkHooks.openScreen(serverPlayer, missionControl, buffer -> buffer.writeBlockPos(pos));
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);

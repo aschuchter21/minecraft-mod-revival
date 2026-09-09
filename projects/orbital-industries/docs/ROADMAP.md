@@ -13,11 +13,13 @@
 
 ## Milestone 1 — Mission Control
 
-- Mission Control menu + screen.
-- Server-to-client network snapshot packets.
+- [x] Mission Control menu + first dashboard screen.
+- [x] Server-synced network counters.
 - Rename infrastructure nodes.
-- Network overview and status cards.
-- Register/unregister infrastructure controllers.
+- Network overview status cards and detail lists.
+- Station detail view.
+- Colony detail view.
+- Satellite/fleet detail views.
 - First Galacticraft celestial-body adapter.
 
 ## Milestone 2 — Modular Space Stations
