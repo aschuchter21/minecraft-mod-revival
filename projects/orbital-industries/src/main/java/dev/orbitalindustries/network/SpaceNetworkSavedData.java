@@ -67,8 +67,25 @@ public final class SpaceNetworkSavedData extends SavedData {
         return nodes.values().stream().filter(node -> node.type() == type).count();
     }
 
+    public int operationalStationCount() {
+        return (int) stations.values().stream().filter(StationState::isOperational).count();
+    }
+
+    public int totalStationModules() {
+        return stations.values().stream().mapToInt(StationState::totalModules).sum();
+    }
+
+    public int netStationPower() {
+        return stations.values().stream().mapToInt(StationState::netPower).sum();
+    }
+
+    public int netStationOxygen() {
+        return stations.values().stream().mapToInt(StationState::netOxygen).sum();
+    }
+
     public String summary() {
         return "Network online | Stations: " + count(NetworkNodeType.STATION)
+                + " (" + operationalStationCount() + " operational)"
                 + " | Colonies: " + count(NetworkNodeType.COLONY)
                 + " | Satellites: " + count(NetworkNodeType.SATELLITE)
                 + " | Depots: " + count(NetworkNodeType.ORBITAL_DEPOT)

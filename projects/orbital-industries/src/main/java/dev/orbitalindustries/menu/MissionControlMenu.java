@@ -21,7 +21,11 @@ public final class MissionControlMenu extends AbstractContainerMenu {
     private static final int SATELLITES = 2;
     private static final int DEPOTS = 3;
     private static final int ROUTES = 4;
-    private static final int DATA_COUNT = 5;
+    private static final int OPERATIONAL_STATIONS = 5;
+    private static final int STATION_MODULES = 6;
+    private static final int NET_STATION_POWER = 7;
+    private static final int NET_STATION_OXYGEN = 8;
+    private static final int DATA_COUNT = 9;
 
     private final ContainerData data;
     private final ContainerLevelAccess access;
@@ -56,6 +60,10 @@ public final class MissionControlMenu extends AbstractContainerMenu {
                     case SATELLITES -> (int) network.count(NetworkNodeType.SATELLITE);
                     case DEPOTS -> (int) network.count(NetworkNodeType.ORBITAL_DEPOT);
                     case ROUTES -> network.routes().size();
+                    case OPERATIONAL_STATIONS -> network.operationalStationCount();
+                    case STATION_MODULES -> network.totalStationModules();
+                    case NET_STATION_POWER -> network.netStationPower();
+                    case NET_STATION_OXYGEN -> network.netStationOxygen();
                     default -> 0;
                 };
             }
@@ -89,6 +97,22 @@ public final class MissionControlMenu extends AbstractContainerMenu {
 
     public int routeCount() {
         return data.get(ROUTES);
+    }
+
+    public int operationalStationCount() {
+        return data.get(OPERATIONAL_STATIONS);
+    }
+
+    public int stationModuleCount() {
+        return data.get(STATION_MODULES);
+    }
+
+    public int netStationPower() {
+        return data.get(NET_STATION_POWER);
+    }
+
+    public int netStationOxygen() {
+        return data.get(NET_STATION_OXYGEN);
     }
 
     @Override

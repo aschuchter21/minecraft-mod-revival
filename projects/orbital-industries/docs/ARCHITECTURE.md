@@ -8,7 +8,7 @@ The simulation is **network-first, world-backed and physically grounded**. Block
 
 Mission Control is the shared control plane. It reads and manages persistent `SpaceNetworkSavedData`, eventually presenting tabs for Overview, Stations, Colonies, Satellites, Fleet, Logistics, Power, Resources and Missions.
 
-The initial console registers itself as a persistent network node and reports network counts. The future GUI will operate on the same saved model rather than inventing a separate client-only state.
+The console registers itself as a persistent network node and reports server-authoritative network counts. The first dashboard now also exposes aggregate station health: operational station count, connected module count, net station power and net station oxygen. Future screens should consume this same saved model rather than inventing separate client-only state.
 
 ## 2. Persistent network nodes
 
@@ -25,9 +25,19 @@ Specialized station, colony, satellite and industry state will reference these n
 
 ## 3. Space stations
 
-Stations will be controller-driven structures assembled from functional modules. Planned modules include habitation, docking, life support, hydroponics, storage, fuel, research, refining, manufacturing, power generation and artificial gravity.
+Stations are controller-driven structures assembled from functional modules. Initial modules include habitation, docking, life support, cargo storage and solar generation.
 
-Station simulation will aggregate module capabilities into budgets for crew capacity, power, oxygen, storage, docking capacity and industrial throughput.
+`StationState` aggregates module capabilities into crew capacity, power generation/demand, oxygen production/demand, docking capacity and cargo storage. It also derives a server-authoritative `StationOperationalStatus` from those budgets:
+
+- `INCOMPLETE` — controller has no connected station modules.
+- `POWER_DEFICIT` — station demand exceeds generation.
+- `OXYGEN_DEFICIT` — occupied capacity exceeds oxygen production.
+- `POWER_AND_OXYGEN_DEFICIT` — both critical budgets are negative.
+- `OPERATIONAL` — the station has modules and neither critical budget is negative.
+
+Operational status is deliberately derived instead of separately persisted, avoiding stale state after module rescans or save migration.
+
+Next station work should introduce structural ownership/validation, then replace abstract budgets with Forge energy, oxygen and inventory capabilities.
 
 ## 4. Colonies
 
@@ -53,4 +63,4 @@ Expected integration points include celestial bodies, rocket launch/orbit handof
 
 ## 8. Server authority
 
-Persistent simulation is server-authoritative. Clients receive view models/snapshots through packets for Mission Control screens. This keeps multiplayer state deterministic and prevents UI code from becoming the source of truth.
+Persistent simulation is server-authoritative. Clients receive view models/snapshots through menu data and later dedicated packets for Mission Control screens. This keeps multiplayer state deterministic and prevents UI code from becoming the source of truth.

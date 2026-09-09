@@ -49,8 +49,32 @@ public record StationState(UUID nodeId, String name, Map<StationModuleType, Inte
         return oxygenProduction - oxygenDemand;
     }
 
+    public StationOperationalStatus operationalStatus() {
+        if (totalModules() == 0) {
+            return StationOperationalStatus.INCOMPLETE;
+        }
+
+        boolean powerDeficit = netPower() < 0;
+        boolean oxygenDeficit = netOxygen() < 0;
+        if (powerDeficit && oxygenDeficit) {
+            return StationOperationalStatus.POWER_AND_OXYGEN_DEFICIT;
+        }
+        if (powerDeficit) {
+            return StationOperationalStatus.POWER_DEFICIT;
+        }
+        if (oxygenDeficit) {
+            return StationOperationalStatus.OXYGEN_DEFICIT;
+        }
+        return StationOperationalStatus.OPERATIONAL;
+    }
+
+    public boolean isOperational() {
+        return operationalStatus().isOperational();
+    }
+
     public String summary() {
-        return name + " | Modules: " + totalModules()
+        return name + " | Status: " + operationalStatus().name()
+                + " | Modules: " + totalModules()
                 + " | Crew capacity: " + crewCapacity
                 + " | Power: " + signed(netPower())
                 + " | Oxygen: " + signed(netOxygen())

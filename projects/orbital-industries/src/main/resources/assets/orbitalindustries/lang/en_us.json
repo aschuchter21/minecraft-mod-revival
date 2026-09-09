@@ -12,5 +12,7 @@
   "screen.orbitalindustries.mission_control.colonies": "COLONIES",
   "screen.orbitalindustries.mission_control.satellites": "SATELLITES",
   "screen.orbitalindustries.mission_control.depots": "ORBITAL DEPOTS",
-  "screen.orbitalindustries.mission_control.routes": "CARGO ROUTES"
+  "screen.orbitalindustries.mission_control.routes": "CARGO ROUTES",
+  "screen.orbitalindustries.mission_control.station_health": "%s operational • %s modules",
+  "screen.orbitalindustries.mission_control.station_budgets": "Station network budgets  POWER %s   OXYGEN %s"
 }

@@ -15,6 +15,7 @@
 
 - [x] Mission Control menu + first dashboard screen.
 - [x] Server-synced network counters.
+- [x] Server-synced aggregate station health and resource budgets.
 - Rename infrastructure nodes.
 - Network overview status cards and detail lists.
 - Station detail view.
@@ -32,6 +33,7 @@
 - [x] Cargo Storage module foundation.
 - [x] Solar Array / station power budget foundation.
 - [x] Persistent station status model.
+- [x] Derived operational health states for incomplete/power/oxygen failures.
 - Station status cards in Mission Control GUI.
 - Real energy, oxygen and inventory capabilities.
 - Docked vehicle tracking.
