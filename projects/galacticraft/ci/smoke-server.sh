@@ -4,33 +4,27 @@ set -euo pipefail
 RUNTIME_DIR="${1:-ForgeRuntimeValidation}"
 LOG_FILE="$RUNTIME_DIR/server-smoke.log"
 RUN_DIR="$RUNTIME_DIR/run-server"
-MACHINE_RUNTIME_JAR="$RUNTIME_DIR/libs/machinelib-forge-runtime.jar"
+MACHINE_DEV_JAR="$RUNTIME_DIR/libs/machinelib-forge-dev.jar"
 
-mkdir -p "$RUN_DIR"
+mkdir -p "$RUN_DIR/mods"
 printf 'eula=true\n' > "$RUN_DIR/eula.txt"
 
-# MachineLib is a mandatory Forge mod dependency of Galacticraft. The assembled
-# workspace originally placed its Mojmap dev jar on plain runtimeOnly, which
-# exposes classes but does not make FML discover modId "machinelib". For the
-# smoke run, remove that plain runtime dependency and feed the production Forge
-# jar through ModDevGradle's mod-aware remapping configuration instead. This is
-# the same shape expected for ordinary external Forge mod dependencies.
-[[ -s "$MACHINE_RUNTIME_JAR" ]]
+# The ModDevGradle server runs in Mojmap. MachineLib therefore must be the
+# unreobfuscated development jar, not the production SRG/reobfuscated jar.
+# Put that dev jar in the actual mods directory so FML discovers its mods.toml
+# as modId "machinelib" instead of treating it as a plain classpath library.
+[[ -s "$MACHINE_DEV_JAR" ]]
+jar tf "$MACHINE_DEV_JAR" | grep -qx 'META-INF/mods.toml'
+rm -f "$RUN_DIR/mods"/machinelib*.jar
+cp "$MACHINE_DEV_JAR" "$RUN_DIR/mods/machinelib-forge-dev.jar"
+
+# assemble-runtime.sh also places the same dev classes on runtimeOnly so Forge
+# overlays can link during build validation. Remove that plain runtime classpath
+# dependency for runServer; the mods-directory copy is now the sole runtime
+# MachineLib definition and is discoverable by FML.
 cat >> "$RUNTIME_DIR/build.gradle" <<'GRADLE'
 
-repositories {
-    flatDir {
-        dirs 'libs'
-    }
-}
-
-// assemble-runtime.sh adds the Mojmap dev jar to runtimeOnly for classpath
-// validation. Do not leave that duplicate beside the mod-remapped dependency.
 configurations.runtimeOnly.dependencies.clear()
-
-dependencies {
-    modRuntimeOnly 'local:machinelib-forge-runtime:1.0'
-}
 GRADLE
 
 set +e
