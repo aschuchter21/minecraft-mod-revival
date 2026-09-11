@@ -42,14 +42,6 @@ repositories {
     mavenCentral()
 }
 
-// The assembled Galacticraft validation workspace supplies this jar. Declaring
-// it through the mod-aware configuration is important: a plain runtimeOnly file
-// makes MachineLib classes visible but does not make FML discover modId
-// "machinelib", so Galacticraft's mandatory dependency fails before bootstrap.
-dependencies {
-    modRuntimeOnly files('libs/machinelib-forge-dev.jar')
-}
-
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
