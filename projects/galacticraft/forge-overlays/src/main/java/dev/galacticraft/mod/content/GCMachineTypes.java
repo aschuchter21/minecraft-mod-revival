@@ -1,0 +1,461 @@
+/*
+ * Copyright (c) 2019-2023 Team Galacticraft
+ * MIT License
+ */
+package dev.galacticraft.mod.content;
+
+import dev.galacticraft.api.gas.Gases;
+import dev.galacticraft.machinelib.api.filter.ResourceFilters;
+import dev.galacticraft.machinelib.api.machine.MachineStatuses;
+import dev.galacticraft.machinelib.api.machine.MachineType;
+import dev.galacticraft.machinelib.api.menu.MachineMenu;
+import dev.galacticraft.machinelib.api.menu.RecipeMachineMenu;
+import dev.galacticraft.machinelib.api.storage.MachineEnergyStorage;
+import dev.galacticraft.machinelib.api.storage.MachineFluidStorage;
+import dev.galacticraft.machinelib.api.storage.MachineItemStorage;
+import dev.galacticraft.machinelib.api.storage.slot.FluidResourceSlot;
+import dev.galacticraft.machinelib.api.storage.slot.ItemResourceSlot;
+import dev.galacticraft.machinelib.api.transfer.InputType;
+import dev.galacticraft.mod.Galacticraft;
+import dev.galacticraft.mod.content.block.entity.machine.*;
+import dev.galacticraft.mod.content.item.GCItems;
+import dev.galacticraft.mod.machine.GCMachineStatuses;
+import dev.galacticraft.mod.recipe.CompressingRecipe;
+import dev.galacticraft.mod.recipe.FabricationRecipe;
+import dev.galacticraft.mod.screen.*;
+import net.minecraft.world.Container;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.BlastingRecipe;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.SmeltingRecipe;
+import net.minecraftforge.common.Tags;
+
+import java.util.List;
+
+/** Forge-native machine definitions preserving the recovered Galacticraft 1.20.1 values. */
+public class GCMachineTypes {
+    /** MachineLib/Fabric Transfer uses 81,000 internal units for one bucket. */
+    private static final long MACHINE_FLUID_BUCKET = 81_000L;
+
+    public static final MachineType<CoalGeneratorBlockEntity, CoalGeneratorMenu> COAL_GENERATOR = MachineType.create(
+            GCBlocks.COAL_GENERATOR,
+            GCBlockEntityTypes.COAL_GENERATOR,
+            GCMenuTypes.COAL_GENERATOR,
+            List.of(GCMachineStatuses.NO_FUEL, GCMachineStatuses.WARMING_UP, GCMachineStatuses.GENERATING, GCMachineStatuses.COOLING_DOWN, MachineStatuses.CAPACITOR_FULL),
+            () -> MachineEnergyStorage.create(
+                    Galacticraft.CONFIG_MANAGER.get().machineEnergyStorageSize(),
+                    Galacticraft.CONFIG_MANAGER.get().coalGeneratorEnergyProductionRate() * 2,
+                    Galacticraft.CONFIG_MANAGER.get().coalGeneratorEnergyProductionRate() * 2,
+                    false,
+                    true
+            ),
+            MachineItemStorage.of(
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(8, 62)
+                            .filter(ResourceFilters.CAN_INSERT_ENERGY),
+                    ItemResourceSlot.builder(InputType.INPUT)
+                            .pos(71, 53)
+                            .filter((item, tag) -> CoalGeneratorBlockEntity.FUEL_MAP.containsKey(item))
+            )
+    );
+
+    public static final MachineType<BasicSolarPanelBlockEntity, SolarPanelMenu<BasicSolarPanelBlockEntity>> BASIC_SOLAR_PANEL = MachineType.create(
+            GCBlocks.BASIC_SOLAR_PANEL,
+            GCBlockEntityTypes.BASIC_SOLAR_PANEL,
+            GCMenuTypes.BASIC_SOLAR_PANEL,
+            List.of(GCMachineStatuses.BLOCKED, GCMachineStatuses.PARTIALLY_BLOCKED, GCMachineStatuses.COLLECTING, GCMachineStatuses.RAIN, GCMachineStatuses.NIGHT, MachineStatuses.CAPACITOR_FULL),
+            () -> MachineEnergyStorage.create(
+                    Galacticraft.CONFIG_MANAGER.get().machineEnergyStorageSize(),
+                    Galacticraft.CONFIG_MANAGER.get().solarPanelEnergyProductionRate() * 2,
+                    Galacticraft.CONFIG_MANAGER.get().solarPanelEnergyProductionRate() * 2,
+                    false,
+                    true
+            ),
+            MachineItemStorage.of(
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(8, 62)
+                            .filter(ResourceFilters.CAN_INSERT_ENERGY)
+            )
+    );
+
+    public static final MachineType<AdvancedSolarPanelBlockEntity, SolarPanelMenu<AdvancedSolarPanelBlockEntity>> ADVANCED_SOLAR_PANEL = MachineType.create(
+            GCBlocks.ADVANCED_SOLAR_PANEL,
+            GCBlockEntityTypes.ADVANCED_SOLAR_PANEL,
+            GCMenuTypes.ADVANCED_SOLAR_PANEL,
+            List.of(GCMachineStatuses.BLOCKED, GCMachineStatuses.PARTIALLY_BLOCKED, GCMachineStatuses.COLLECTING, GCMachineStatuses.RAIN, GCMachineStatuses.NIGHT, MachineStatuses.CAPACITOR_FULL),
+            () -> MachineEnergyStorage.create(
+                    Galacticraft.CONFIG_MANAGER.get().machineEnergyStorageSize(),
+                    Galacticraft.CONFIG_MANAGER.get().solarPanelEnergyProductionRate() * 2,
+                    Galacticraft.CONFIG_MANAGER.get().solarPanelEnergyProductionRate() * 2,
+                    false,
+                    true
+            ),
+            MachineItemStorage.of(
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(8, 62)
+                            .filter(ResourceFilters.CAN_INSERT_ENERGY)
+            )
+    );
+
+    public static final MachineType<CircuitFabricatorBlockEntity, RecipeMachineMenu<Container, FabricationRecipe, CircuitFabricatorBlockEntity>> CIRCUIT_FABRICATOR = MachineType.create(
+            GCBlocks.CIRCUIT_FABRICATOR,
+            GCBlockEntityTypes.CIRCUIT_FABRICATOR,
+            GCMenuTypes.CIRCUIT_FABRICATOR,
+            List.of(GCMachineStatuses.FABRICATING, MachineStatuses.NOT_ENOUGH_ENERGY, MachineStatuses.OUTPUT_FULL, MachineStatuses.INVALID_RECIPE),
+            () -> MachineEnergyStorage.create(
+                    Galacticraft.CONFIG_MANAGER.get().machineEnergyStorageSize(),
+                    Galacticraft.CONFIG_MANAGER.get().circuitFabricatorEnergyConsumptionRate() * 2,
+                    Galacticraft.CONFIG_MANAGER.get().circuitFabricatorEnergyConsumptionRate() * 2,
+                    true,
+                    false
+            ),
+            MachineItemStorage.of(
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(8, 70)
+                            .filter(ResourceFilters.CAN_EXTRACT_ENERGY),
+                    ItemResourceSlot.builder(InputType.INPUT)
+                            .pos(31, 15)
+                            .filter(ResourceFilters.itemTag(Tags.Items.GEMS_DIAMOND)),
+                    ItemResourceSlot.builder(InputType.INPUT)
+                            .pos(62, 45)
+                            .filter(ResourceFilters.ofResource(GCItems.RAW_SILICON)),
+                    ItemResourceSlot.builder(InputType.INPUT)
+                            .pos(62, 63)
+                            .filter(ResourceFilters.ofResource(GCItems.RAW_SILICON)),
+                    ItemResourceSlot.builder(InputType.INPUT)
+                            .pos(107, 70)
+                            .filter(ResourceFilters.ofResource(Items.REDSTONE)),
+                    ItemResourceSlot.builder(InputType.INPUT)
+                            .pos(134, 15),
+                    ItemResourceSlot.builder(InputType.RECIPE_OUTPUT)
+                            .pos(152, 70)
+            )
+    );
+
+    public static final MachineType<CompressorBlockEntity, CompressorMenu> COMPRESSOR = MachineType.create(
+            GCBlocks.COMPRESSOR,
+            GCBlockEntityTypes.COMPRESSOR,
+            GCMenuTypes.COMPRESSOR,
+            List.of(GCMachineStatuses.COMPRESSING, GCMachineStatuses.NO_FUEL, MachineStatuses.OUTPUT_FULL, MachineStatuses.INVALID_RECIPE),
+            MachineEnergyStorage::empty,
+            MachineItemStorage.builder()
+                    .add(ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(83, 47)
+                            .filter((item, tag) -> item.getBurnTime(new ItemStack(item), RecipeType.SMELTING) > 0))
+                    .add3x3Grid(InputType.INPUT, 17, 17)
+                    .add(ItemResourceSlot.builder(InputType.RECIPE_OUTPUT)
+                            .pos(143, 36))
+    );
+
+    public static final MachineType<ElectricArcFurnaceBlockEntity, RecipeMachineMenu<Container, BlastingRecipe, ElectricArcFurnaceBlockEntity>> ELECTRIC_ARC_FURNACE = MachineType.create(
+            GCBlocks.ELECTRIC_ARC_FURNACE,
+            GCBlockEntityTypes.ELECTRIC_ARC_FURNACE,
+            GCMenuTypes.ELECTRIC_ARC_FURNACE,
+            List.of(MachineStatuses.ACTIVE, MachineStatuses.NOT_ENOUGH_ENERGY, MachineStatuses.OUTPUT_FULL, MachineStatuses.INVALID_RECIPE),
+            () -> MachineEnergyStorage.create(
+                    Galacticraft.CONFIG_MANAGER.get().machineEnergyStorageSize(),
+                    Galacticraft.CONFIG_MANAGER.get().electricArcFurnaceEnergyConsumptionRate() * 2,
+                    Galacticraft.CONFIG_MANAGER.get().electricArcFurnaceEnergyConsumptionRate() * 2,
+                    true,
+                    false
+            ),
+            MachineItemStorage.of(
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(8, 62)
+                            .filter(ResourceFilters.CAN_EXTRACT_ENERGY),
+                    ItemResourceSlot.builder(InputType.INPUT)
+                            .pos(44, 35),
+                    ItemResourceSlot.builder(InputType.RECIPE_OUTPUT)
+                            .pos(108, 35),
+                    ItemResourceSlot.builder(InputType.RECIPE_OUTPUT)
+                            .pos(134, 35)
+            )
+    );
+
+    public static final MachineType<ElectricCompressorBlockEntity, RecipeMachineMenu<Container, CompressingRecipe, ElectricCompressorBlockEntity>> ELECTRIC_COMPRESSOR = MachineType.create(
+            GCBlocks.ELECTRIC_COMPRESSOR,
+            GCBlockEntityTypes.ELECTRIC_COMPRESSOR,
+            GCMenuTypes.ELECTRIC_COMPRESSOR,
+            List.of(GCMachineStatuses.COMPRESSING, MachineStatuses.NOT_ENOUGH_ENERGY, MachineStatuses.OUTPUT_FULL, MachineStatuses.INVALID_RECIPE),
+            () -> MachineEnergyStorage.create(
+                    Galacticraft.CONFIG_MANAGER.get().machineEnergyStorageSize(),
+                    Galacticraft.CONFIG_MANAGER.get().electricCompressorEnergyConsumptionRate() * 2,
+                    Galacticraft.CONFIG_MANAGER.get().electricCompressorEnergyConsumptionRate() * 2,
+                    true,
+                    false
+            ),
+            MachineItemStorage.builder()
+                    .add(ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(8, 61)
+                            .filter(ResourceFilters.CAN_EXTRACT_ENERGY)
+                    )
+                    .add3x3Grid(InputType.INPUT, 30, 17)
+                    .add(ItemResourceSlot.builder(InputType.RECIPE_OUTPUT)
+                            .pos(148, 22)
+                    )
+                    .add(ItemResourceSlot.builder(InputType.RECIPE_OUTPUT)
+                            .pos(148, 48)
+                    )
+    );
+
+    public static final MachineType<ElectricFurnaceBlockEntity, RecipeMachineMenu<Container, SmeltingRecipe, ElectricFurnaceBlockEntity>> ELECTRIC_FURNACE = MachineType.create(
+            GCBlocks.ELECTRIC_FURNACE,
+            GCBlockEntityTypes.ELECTRIC_FURNACE,
+            GCMenuTypes.ELECTRIC_FURNACE,
+            List.of(MachineStatuses.ACTIVE, MachineStatuses.NOT_ENOUGH_ENERGY, MachineStatuses.OUTPUT_FULL, MachineStatuses.INVALID_RECIPE),
+            () -> MachineEnergyStorage.create(
+                    Galacticraft.CONFIG_MANAGER.get().machineEnergyStorageSize(),
+                    Galacticraft.CONFIG_MANAGER.get().electricFurnaceEnergyConsumptionRate() * 2,
+                    Galacticraft.CONFIG_MANAGER.get().electricFurnaceEnergyConsumptionRate() * 2,
+                    true,
+                    false
+            ),
+            MachineItemStorage.of(
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(8, 61)
+                            .filter(ResourceFilters.CAN_EXTRACT_ENERGY),
+                    ItemResourceSlot.builder(InputType.INPUT)
+                            .pos(52, 35),
+                    ItemResourceSlot.builder(InputType.RECIPE_OUTPUT)
+                            .pos(113, 35)
+            )
+    );
+
+    public static final MachineType<EnergyStorageModuleBlockEntity, MachineMenu<EnergyStorageModuleBlockEntity>> ENERGY_STORAGE_MODULE = MachineType.create(
+            GCBlocks.ENERGY_STORAGE_MODULE,
+            GCBlockEntityTypes.ENERGY_STORAGE_MODULE,
+            GCMenuTypes.ENERGY_STORAGE_MODULE,
+            List.of(MachineStatuses.ACTIVE),
+            () -> MachineEnergyStorage.create(
+                    Galacticraft.CONFIG_MANAGER.get().energyStorageModuleStorageSize(),
+                    Galacticraft.CONFIG_MANAGER.get().energyStorageModuleStorageSize() / 200,
+                    Galacticraft.CONFIG_MANAGER.get().energyStorageModuleStorageSize() / 200,
+                    true,
+                    true
+            ),
+            MachineItemStorage.of(
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(102, 48)
+                            .filter(ResourceFilters.CAN_EXTRACT_ENERGY),
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(102, 24)
+                            .filter(ResourceFilters.CAN_INSERT_ENERGY)
+            )
+    );
+
+    public static final MachineType<FuelLoaderBlockEntity, FuelLoaderMenu> FUEL_LOADER = MachineType.create(
+            GCBlocks.FUEL_LOADER,
+            GCBlockEntityTypes.FUEL_LOADER,
+            GCMenuTypes.FUEL_LOADER,
+            List.of(GCMachineStatuses.NO_ROCKET, GCMachineStatuses.LOADING, MachineStatuses.NOT_ENOUGH_ENERGY),
+            () -> MachineEnergyStorage.create(
+                    Galacticraft.CONFIG_MANAGER.get().machineEnergyStorageSize(),
+                    150 * 2,
+                    150 * 2,
+                    true,
+                    false
+            ),
+            MachineItemStorage.of(
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(8, 61)
+                            .filter(ResourceFilters.CAN_EXTRACT_ENERGY),
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(80, 61)
+                            .filter(ResourceFilters.canExtractFluid(GCFluids.FUEL))
+            ),
+            MachineFluidStorage.of(
+                    FluidResourceSlot.builder(InputType.INPUT)
+                            .height(0)
+                            .capacity(MACHINE_FLUID_BUCKET * 50)
+                            .filter(ResourceFilters.ofResource(GCFluids.FUEL))
+            )
+    );
+
+    public static final MachineType<OxygenBubbleDistributorBlockEntity, OxygenBubbleDistributorMenu> OXYGEN_BUBBLE_DISTRIBUTOR = MachineType.create(
+            GCBlocks.OXYGEN_BUBBLE_DISTRIBUTOR,
+            GCBlockEntityTypes.OXYGEN_BUBBLE_DISTRIBUTOR,
+            GCMenuTypes.OXYGEN_BUBBLE_DISTRIBUTOR,
+            List.of(GCMachineStatuses.DISTRIBUTING, GCMachineStatuses.NOT_ENOUGH_OXYGEN, MachineStatuses.NOT_ENOUGH_ENERGY),
+            () -> MachineEnergyStorage.create(
+                    Galacticraft.CONFIG_MANAGER.get().machineEnergyStorageSize(),
+                    Galacticraft.CONFIG_MANAGER.get().oxygenCollectorEnergyConsumptionRate() * 2,
+                    Galacticraft.CONFIG_MANAGER.get().oxygenCollectorEnergyConsumptionRate() * 2,
+                    true,
+                    false
+            ),
+            MachineItemStorage.of(
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(8, 62)
+                            .filter(ResourceFilters.CAN_EXTRACT_ENERGY),
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(31, 62)
+                            .filter(ResourceFilters.canExtractFluid(Gases.OXYGEN))
+            ),
+            MachineFluidStorage.of(
+                    FluidResourceSlot.builder(InputType.INPUT)
+                            .pos(31, 8)
+                            .capacity(OxygenBubbleDistributorBlockEntity.MAX_OXYGEN)
+                            .filter(ResourceFilters.ofResource(Gases.OXYGEN))
+            )
+    );
+
+    public static final MachineType<OxygenCollectorBlockEntity, OxygenCollectorMenu> OXYGEN_COLLECTOR = MachineType.create(
+            GCBlocks.OXYGEN_COLLECTOR,
+            GCBlockEntityTypes.OXYGEN_COLLECTOR,
+            GCMenuTypes.OXYGEN_COLLECTOR,
+            List.of(GCMachineStatuses.OXYGEN_TANK_FULL, GCMachineStatuses.COLLECTING, GCMachineStatuses.NOT_ENOUGH_OXYGEN, MachineStatuses.NOT_ENOUGH_ENERGY),
+            () -> MachineEnergyStorage.create(
+                    Galacticraft.CONFIG_MANAGER.get().machineEnergyStorageSize(),
+                    Galacticraft.CONFIG_MANAGER.get().oxygenCollectorEnergyConsumptionRate() * 2,
+                    Galacticraft.CONFIG_MANAGER.get().oxygenCollectorEnergyConsumptionRate() * 2,
+                    true,
+                    false
+            ),
+            MachineItemStorage.of(
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(8, 62)
+                            .filter(ResourceFilters.CAN_EXTRACT_ENERGY)
+            ),
+            MachineFluidStorage.of(
+                    FluidResourceSlot.builder(InputType.OUTPUT)
+                            .pos(31, 8)
+                            .capacity(OxygenCollectorBlockEntity.MAX_OXYGEN)
+                            .filter(ResourceFilters.ofResource(Gases.OXYGEN))
+            )
+    );
+
+    public static final MachineType<OxygenCompressorBlockEntity, MachineMenu<OxygenCompressorBlockEntity>> OXYGEN_COMPRESSOR = MachineType.create(
+            GCBlocks.OXYGEN_COMPRESSOR,
+            GCBlockEntityTypes.OXYGEN_COMPRESSOR,
+            GCMenuTypes.OXYGEN_COMPRESSOR,
+            List.of(GCMachineStatuses.OXYGEN_TANK_FULL, GCMachineStatuses.COMPRESSING, GCMachineStatuses.NOT_ENOUGH_OXYGEN, MachineStatuses.NOT_ENOUGH_ENERGY, GCMachineStatuses.MISSING_OXYGEN_TANK),
+            () -> MachineEnergyStorage.create(
+                    Galacticraft.CONFIG_MANAGER.get().machineEnergyStorageSize(),
+                    Galacticraft.CONFIG_MANAGER.get().oxygenCompressorEnergyConsumptionRate() * 2,
+                    Galacticraft.CONFIG_MANAGER.get().oxygenCompressorEnergyConsumptionRate() * 2,
+                    true,
+                    false
+            ),
+            MachineItemStorage.of(
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(8, 62)
+                            .filter(ResourceFilters.CAN_EXTRACT_ENERGY),
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(80, 27)
+                            .filter(ResourceFilters.canInsertFluid(Gases.OXYGEN))
+            ),
+            MachineFluidStorage.of(
+                    FluidResourceSlot.builder(InputType.INPUT)
+                            .pos(31, 8)
+                            .capacity(OxygenCompressorBlockEntity.MAX_OXYGEN)
+                            .filter(ResourceFilters.ofResource(Gases.OXYGEN))
+            )
+    );
+
+    public static final MachineType<OxygenDecompressorBlockEntity, MachineMenu<OxygenDecompressorBlockEntity>> OXYGEN_DECOMPRESSOR = MachineType.create(
+            GCBlocks.OXYGEN_DECOMPRESSOR,
+            GCBlockEntityTypes.OXYGEN_DECOMPRESSOR,
+            GCMenuTypes.OXYGEN_DECOMPRESSOR,
+            List.of(GCMachineStatuses.EMPTY_OXYGEN_TANK, GCMachineStatuses.COMPRESSING, MachineStatuses.NOT_ENOUGH_ENERGY, GCMachineStatuses.MISSING_OXYGEN_TANK),
+            () -> MachineEnergyStorage.create(
+                    Galacticraft.CONFIG_MANAGER.get().machineEnergyStorageSize(),
+                    Galacticraft.CONFIG_MANAGER.get().oxygenDecompressorEnergyConsumptionRate() * 2,
+                    Galacticraft.CONFIG_MANAGER.get().oxygenDecompressorEnergyConsumptionRate() * 2,
+                    true,
+                    false
+            ),
+            MachineItemStorage.of(
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(8, 62)
+                            .filter(ResourceFilters.CAN_EXTRACT_ENERGY),
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(80, 27)
+                            .filter(ResourceFilters.canExtractFluid(Gases.OXYGEN))
+            ),
+            MachineFluidStorage.of(
+                    FluidResourceSlot.builder(InputType.OUTPUT)
+                            .pos(31, 8)
+                            .capacity(OxygenDecompressorBlockEntity.MAX_OXYGEN)
+                            .filter(ResourceFilters.ofResource(Gases.OXYGEN))
+            )
+    );
+
+    public static final MachineType<OxygenSealerBlockEntity, MachineMenu<OxygenSealerBlockEntity>> OXYGEN_SEALER = MachineType.create(
+            GCBlocks.OXYGEN_SEALER,
+            GCBlockEntityTypes.OXYGEN_SEALER,
+            GCMenuTypes.OXYGEN_SEALER,
+            List.of(GCMachineStatuses.ALREADY_SEALED, GCMachineStatuses.AREA_TOO_LARGE, GCMachineStatuses.SEALED, GCMachineStatuses.NOT_ENOUGH_OXYGEN, MachineStatuses.NOT_ENOUGH_ENERGY),
+            () -> MachineEnergyStorage.create(
+                    Galacticraft.CONFIG_MANAGER.get().machineEnergyStorageSize(),
+                    Galacticraft.CONFIG_MANAGER.get().oxygenCompressorEnergyConsumptionRate() * 2,
+                    Galacticraft.CONFIG_MANAGER.get().oxygenCompressorEnergyConsumptionRate() * 2,
+                    true,
+                    false
+            ),
+            MachineItemStorage.of(
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(8, 62)
+                            .filter(ResourceFilters.CAN_EXTRACT_ENERGY),
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(31, 62)
+                            .filter(ResourceFilters.canExtractFluid(Gases.OXYGEN))
+            ),
+            MachineFluidStorage.of(
+                    FluidResourceSlot.builder(InputType.INPUT)
+                            .pos(30, 8)
+                            .capacity(OxygenSealerBlockEntity.MAX_OXYGEN)
+                            .filter(ResourceFilters.ofResource(Gases.OXYGEN))
+            )
+    );
+
+    public static final MachineType<OxygenStorageModuleBlockEntity, MachineMenu<OxygenStorageModuleBlockEntity>> OXYGEN_STORAGE_MODULE = MachineType.create(
+            GCBlocks.OXYGEN_STORAGE_MODULE,
+            GCBlockEntityTypes.OXYGEN_STORAGE_MODULE,
+            GCMenuTypes.OXYGEN_STORAGE_MODULE,
+            List.of(MachineStatuses.ACTIVE),
+            MachineEnergyStorage::empty,
+            MachineItemStorage::empty,
+            MachineFluidStorage.of(
+                    FluidResourceSlot.builder(InputType.STORAGE)
+                            .pos(31, 8)
+                            .capacity(OxygenStorageModuleBlockEntity.MAX_OXYGEN)
+                            .filter(ResourceFilters.ofResource(Gases.OXYGEN))
+            )
+    );
+
+    public static final MachineType<RefineryBlockEntity, MachineMenu<RefineryBlockEntity>> REFINERY = MachineType.create(
+            GCBlocks.REFINERY,
+            GCBlockEntityTypes.REFINERY,
+            GCMenuTypes.REFINERY,
+            List.of(GCMachineStatuses.MISSING_OIL, GCMachineStatuses.FUEL_TANK_FULL, MachineStatuses.ACTIVE, MachineStatuses.NOT_ENOUGH_ENERGY),
+            () -> MachineEnergyStorage.create(
+                    Galacticraft.CONFIG_MANAGER.get().machineEnergyStorageSize(),
+                    Galacticraft.CONFIG_MANAGER.get().refineryEnergyConsumptionRate() * 2,
+                    Galacticraft.CONFIG_MANAGER.get().refineryEnergyConsumptionRate() * 2,
+                    true,
+                    false
+            ),
+            MachineItemStorage.of(
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(8, 7)
+                            .filter(ResourceFilters.CAN_EXTRACT_ENERGY),
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(124, 7)
+                            .filter(ResourceFilters.canExtractFluid(GCFluids.CRUDE_OIL)),
+                    ItemResourceSlot.builder(InputType.TRANSFER)
+                            .pos(154, 7)
+                            .filter(ResourceFilters.canInsertFluid(GCFluids.FUEL))
+            ),
+            MachineFluidStorage.of(
+                    FluidResourceSlot.builder(InputType.INPUT)
+                            .pos(122, 28)
+                            .capacity(RefineryBlockEntity.MAX_CAPACITY)
+                            .filter(ResourceFilters.ofResource(GCFluids.CRUDE_OIL)),
+                    FluidResourceSlot.builder(InputType.RECIPE_OUTPUT)
+                            .pos(152, 28)
+                            .capacity(RefineryBlockEntity.MAX_CAPACITY)
+                            .filter(ResourceFilters.ofResource(GCFluids.FUEL))
+            )
+    );
+}
