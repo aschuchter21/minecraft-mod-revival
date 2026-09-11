@@ -249,8 +249,11 @@ jobs:
         working-directory: Revival/projects/machinelib/forge-backport
         run: |
           gradle clean build --stacktrace
-          jar --create --file build/libs/MachineLib-Forge-1.20.1-dev.jar -C build/classes/java/main .
+          jar --create --file build/libs/MachineLib-Forge-1.20.1-dev.jar \
+            -C build/classes/java/main . \
+            -C build/resources/main .
           test -s build/libs/MachineLib-Forge-1.20.1-dev.jar
+          jar tf build/libs/MachineLib-Forge-1.20.1-dev.jar | grep -qx 'META-INF/mods.toml'
           echo '--- Forge MachineLib jars ---'
           find build/libs -maxdepth 1 -type f -printf '%f\n' | sort
 
