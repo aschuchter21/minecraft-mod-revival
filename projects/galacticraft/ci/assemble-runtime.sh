@@ -213,12 +213,67 @@ while IFS= read -r source; do
   fi
 done < <(find "$RUNTIME_SRC" -type f -name '*.java' -print | sort)
 
-# Bring over only loader-neutral game resources for the first runtime test.
-# Fabric metadata, access widener and Fabric mixin configs are deliberately not
-# copied; those subsystems are being ported independently.
-cp -R "$UPSTREAM_GC/src/main/resources/assets" "$OUT_DIR/src/main/resources/"
-cp -R "$UPSTREAM_GC/src/main/resources/data" "$OUT_DIR/src/main/resources/"
-cp "$UPSTREAM_GC/src/main/resources/pack.mcmeta" "$OUT_DIR/src/main/resources/pack.mcmeta"
+# Bring over the complete loader-neutral resource pack. This Galacticraft branch
+# stores a large portion of its generated blockstates/models/item models under
+# src/main/generated; omitting that tree makes the client load hundreds of
+# missing-model fallbacks even though the Java runtime itself is healthy.
+RESOURCE_ROOT="$OUT_DIR/src/main/resources"
+mkdir -p "$RESOURCE_ROOT"
+cp -R "$UPSTREAM_GC/src/main/resources/assets" "$RESOURCE_ROOT/"
+cp -R "$UPSTREAM_GC/src/main/resources/data" "$RESOURCE_ROOT/"
+if [[ -d "$UPSTREAM_GC/src/main/generated/assets" ]]; then
+  cp -R "$UPSTREAM_GC/src/main/generated/assets/." "$RESOURCE_ROOT/assets/"
+fi
+if [[ -d "$UPSTREAM_GC/src/main/generated/data" ]]; then
+  cp -R "$UPSTREAM_GC/src/main/generated/data/." "$RESOURCE_ROOT/data/"
+fi
+cp "$UPSTREAM_GC/src/main/resources/pack.mcmeta" "$RESOURCE_ROOT/pack.mcmeta"
+
+# Porting Lib's OBJ JSON format intentionally mirrors Forge's OBJ loader. The
+# recovered player transport tube therefore needs only the loader namespace
+# changed; Forge 47.4.10 natively supports model, mtl_override,
+# automatic_culling and flip_v with the same semantics.
+python3 - "$RESOURCE_ROOT/assets/galacticraft" <<'PY'
+from pathlib import Path
+import sys
+
+assets = Path(sys.argv[1])
+old = '"loader": "porting_lib:obj"'
+new = '"loader": "forge:obj"'
+changed = 0
+for path in assets.rglob('*.json'):
+    text = path.read_text()
+    if old in text:
+        path.write_text(text.replace(old, new))
+        changed += 1
+
+if changed < 1:
+    raise SystemExit("Expected at least one Porting Lib OBJ model to translate for Forge")
+
+remaining = []
+for path in assets.rglob('*.json'):
+    if 'porting_lib:' in path.read_text():
+        remaining.append(str(path))
+if remaining:
+    raise SystemExit("Unported Porting Lib model loader references remain: " + ", ".join(remaining))
+
+print(f"Translated {changed} Porting Lib OBJ model definition(s) to Forge OBJ loader")
+PY
+
+# Assert representative generated assets that were missing in the first real
+# client launch are now present before the jar is built.
+for resource in \
+  "$RESOURCE_ROOT/assets/galacticraft/blockstates/aluminum_decoration.json" \
+  "$RESOURCE_ROOT/assets/galacticraft/models/item/air_lock_frame.json" \
+  "$RESOURCE_ROOT/assets/galacticraft/models/item/air_lock_controller.json" \
+  "$RESOURCE_ROOT/assets/galacticraft/models/item/air_lock_seal.json" \
+  "$RESOURCE_ROOT/assets/galacticraft/models/block/player_transport_tube.json"; do
+  [[ -s "$resource" ]] || {
+    echo "Missing required client resource after recovery: $resource" >&2
+    exit 1
+  }
+done
+grep -Fq '"loader": "forge:obj"' "$RESOURCE_ROOT/assets/galacticraft/models/block/player_transport_tube.json"
 
 cat >> "$OUT_DIR/build.gradle" <<'GRADLE'
 
@@ -305,7 +360,11 @@ for entry in \
   'dev/galacticraft/mod/content/GCBlockEntityTypes.class' \
   'dev/galacticraft/mod/content/entity/RocketEntity.class' \
   'dev/galacticraft/mod/content/block/entity/RocketWorkbenchBlockEntity.class' \
-  'dev/galacticraft/mod/screen/GCMenuTypes.class'; do
+  'dev/galacticraft/mod/screen/GCMenuTypes.class' \
+  'assets/galacticraft/blockstates/aluminum_decoration.json' \
+  'assets/galacticraft/models/item/air_lock_frame.json' \
+  'assets/galacticraft/models/item/air_lock_controller.json' \
+  'assets/galacticraft/models/item/air_lock_seal.json'; do
   grep -Fxq "$entry" "$JAR_ENTRIES" || {
     echo "Missing required runtime entry: $entry" >&2
     exit 1
