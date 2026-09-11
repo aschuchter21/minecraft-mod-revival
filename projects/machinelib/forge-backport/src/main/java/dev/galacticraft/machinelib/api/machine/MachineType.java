@@ -40,6 +40,18 @@ public interface MachineType<Machine extends MachineBlockEntity, Menu extends Ab
         return create(block, blockEntityType, menuType, energySupplier, itemSupplier);
     }
 
+    /**
+     * Galacticraft 1.20.1 also supplies a machine status domain for fluid-backed machines.
+     * MachineLib 0.3 no longer stores that domain in MachineType, but keeping this overload preserves
+     * the original Galacticraft call shape while delegating to the Forge storage implementation.
+     */
+    static <Machine extends MachineBlockEntity, Menu extends AbstractContainerMenu> MachineType<Machine, Menu> create(
+            Block block, BlockEntityType<Machine> blockEntityType, MenuType<Menu> menuType,
+            List<MachineStatus> ignoredStatusDomain, Supplier<MachineEnergyStorage> energySupplier,
+            Supplier<MachineItemStorage> itemSupplier, Supplier<MachineFluidStorage> fluidSupplier) {
+        return create(block, blockEntityType, menuType, energySupplier, itemSupplier, fluidSupplier);
+    }
+
     MachineEnergyStorage createEnergyStorage();
     MachineItemStorage createItemStorage();
     MachineFluidStorage createFluidStorage();
