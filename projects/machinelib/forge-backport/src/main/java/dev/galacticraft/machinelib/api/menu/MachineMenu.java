@@ -52,6 +52,12 @@ public class MachineMenu<Machine extends MachineBlockEntity> extends AbstractCon
     public final @NotNull Inventory playerInventory;
     public final @NotNull UUID playerUUID;
 
+    /** Client-facing MachineLib 0.3 ABI restored for Galacticraft machine screens. */
+    public final @NotNull dev.galacticraft.machinelib.api.machine.MachineState state;
+    public final @NotNull dev.galacticraft.machinelib.api.storage.MachineEnergyStorage energyStorage;
+    public final @NotNull dev.galacticraft.machinelib.api.storage.MachineItemStorage itemStorage;
+    public final @NotNull dev.galacticraft.machinelib.api.storage.MachineFluidStorage fluidStorage;
+
     private final List<MenuSyncHandler> syncHandlers = new ArrayList<>();
 
     /** Server-side constructor used by Galacticraft machine block entities. */
@@ -65,6 +71,10 @@ public class MachineMenu<Machine extends MachineBlockEntity> extends AbstractCon
         this.playerUUID = player.getUUID();
         this.levelAccess = ContainerLevelAccess.create(
                 Objects.requireNonNull(machine.getLevel()), machine.getBlockPos());
+        this.state = machine.getState();
+        this.energyStorage = machine.energyStorage();
+        this.itemStorage = machine.itemStorage();
+        this.fluidStorage = machine.fluidStorage();
         this.registerSyncHandlers(this::addSyncHandler);
     }
 
@@ -87,6 +97,13 @@ public class MachineMenu<Machine extends MachineBlockEntity> extends AbstractCon
         }
         this.machine = (Machine) blockEntity;
         this.levelAccess = ContainerLevelAccess.create(inventory.player.level(), blockPos);
+        // Forge keeps a real client block entity for the opened machine. Reuse its
+        // storages/state so recovered Galacticraft screens see the exact MachineLib
+        // fields they were compiled against, without Fabric transfer wrappers.
+        this.state = this.machine.getState();
+        this.energyStorage = this.machine.energyStorage();
+        this.itemStorage = this.machine.itemStorage();
+        this.fluidStorage = this.machine.fluidStorage();
         this.registerSyncHandlers(this::addSyncHandler);
     }
 
