@@ -63,6 +63,7 @@ import dev.galacticraft.mod.client.particle.LanderParticle;
 import dev.galacticraft.mod.content.GCBlockEntityTypes;
 import dev.galacticraft.mod.content.GCBlocks;
 import dev.galacticraft.mod.content.GCEntityTypes;
+import dev.galacticraft.mod.events.ClientEventHandler;
 import dev.galacticraft.mod.particle.GCParticleTypes;
 import dev.galacticraft.mod.screen.GCMenuTypes;
 import net.minecraft.client.gui.screens.MenuScreens;
@@ -150,6 +151,7 @@ public final class GalacticraftForgeClient {
 
     private static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
+            ClientEventHandler.init();
             GalacticraftRocketPartRenderers.register();
 
             MenuScreens.register(GCMenuTypes.BASIC_SOLAR_PANEL, BasicSolarPanelScreen::new);
