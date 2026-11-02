@@ -34,9 +34,11 @@ import dev.galacticraft.mod.forge.fluid.ForgeGCFluidTypes;
 import dev.galacticraft.mod.forge.network.ForgeRocketNetworking;
 import dev.galacticraft.mod.screen.GCMenuTypes;
 import net.minecraft.core.registries.Registries;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DataPackRegistryEvent;
@@ -65,6 +67,7 @@ public final class GalacticraftForgeBootstrap {
         MinecraftForge.EVENT_BUS.addListener(GalacticraftForgeBlockHooks::onBlockToolModification);
 
         ForgeRocketNetworking.register();
+        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> GalacticraftForgeClient.register(modBus));
         LOGGER.info("Galacticraft Forge 1.20.1 runtime bootstrap loaded");
     }
 
