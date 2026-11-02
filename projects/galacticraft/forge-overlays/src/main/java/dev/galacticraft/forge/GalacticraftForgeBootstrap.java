@@ -32,6 +32,7 @@ import dev.galacticraft.mod.content.item.GCItems;
 import dev.galacticraft.mod.data.gen.SatelliteChunkGenerator;
 import dev.galacticraft.mod.forge.fluid.ForgeGCFluidTypes;
 import dev.galacticraft.mod.forge.network.ForgeRocketNetworking;
+import dev.galacticraft.mod.particle.GCParticleTypes;
 import dev.galacticraft.mod.screen.GCMenuTypes;
 import net.minecraft.core.registries.Registries;
 import net.minecraftforge.api.distmarker.Dist;
@@ -123,6 +124,9 @@ public final class GalacticraftForgeBootstrap {
         }
         if (event.getRegistryKey().equals(Registries.MENU)) {
             GCMenuTypes.register();
+        }
+        if (event.getRegistryKey().equals(Registries.PARTICLE_TYPE)) {
+            GCParticleTypes.register();
         }
 
         event.register(Registries.CHUNK_GENERATOR, Constant.id("satellite"),
