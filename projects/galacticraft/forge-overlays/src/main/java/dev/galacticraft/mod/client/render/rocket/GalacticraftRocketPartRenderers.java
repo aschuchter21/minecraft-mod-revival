@@ -26,14 +26,14 @@ import java.util.Objects;
  * ModelManager provide the same lifecycle without a Fabric runtime dependency.
  */
 public final class GalacticraftRocketPartRenderers {
-    private static final ResourceLocation DEFAULT_CONE = new ResourceLocation(Constant.MOD_ID, "models/misc/rocket_cone_basic.json");
-    private static final ResourceLocation ADVANCED_CONE = new ResourceLocation(Constant.MOD_ID, "models/misc/rocket_cone_advanced.json");
-    private static final ResourceLocation SLOPED_CONE = new ResourceLocation(Constant.MOD_ID, "models/misc/rocket_cone_sloped.json");
-    private static final ResourceLocation DEFAULT_BODY = new ResourceLocation(Constant.MOD_ID, "models/misc/rocket_body.json");
-    private static final ResourceLocation DEFAULT_FIN = new ResourceLocation(Constant.MOD_ID, "models/misc/rocket_fins.json");
-    private static final ResourceLocation DEFAULT_BOTTOM = new ResourceLocation(Constant.MOD_ID, "models/misc/rocket_bottom.json");
-    private static final ResourceLocation BOOSTER_TIER_1 = new ResourceLocation(Constant.MOD_ID, "models/misc/rocket_thruster_tier_1.json");
-    private static final ResourceLocation BOOSTER_TIER_2 = new ResourceLocation(Constant.MOD_ID, "models/misc/rocket_thruster_tier_2.json");
+    private static final ResourceLocation DEFAULT_CONE = new ResourceLocation(Constant.MOD_ID, "misc/rocket_cone_basic");
+    private static final ResourceLocation ADVANCED_CONE = new ResourceLocation(Constant.MOD_ID, "misc/rocket_cone_advanced");
+    private static final ResourceLocation SLOPED_CONE = new ResourceLocation(Constant.MOD_ID, "misc/rocket_cone_sloped");
+    private static final ResourceLocation DEFAULT_BODY = new ResourceLocation(Constant.MOD_ID, "misc/rocket_body");
+    private static final ResourceLocation DEFAULT_FIN = new ResourceLocation(Constant.MOD_ID, "misc/rocket_fins");
+    private static final ResourceLocation DEFAULT_BOTTOM = new ResourceLocation(Constant.MOD_ID, "misc/rocket_bottom");
+    private static final ResourceLocation BOOSTER_TIER_1 = new ResourceLocation(Constant.MOD_ID, "misc/rocket_thruster_tier_1");
+    private static final ResourceLocation BOOSTER_TIER_2 = new ResourceLocation(Constant.MOD_ID, "misc/rocket_thruster_tier_2");
 
     private GalacticraftRocketPartRenderers() {
     }
