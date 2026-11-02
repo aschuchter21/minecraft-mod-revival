@@ -238,27 +238,39 @@ from pathlib import Path
 import sys
 
 assets = Path(sys.argv[1])
-old = '"loader": "porting_lib:obj"'
-new = '"loader": "forge:obj"'
-changed = 0
+old_loader = '"loader": "porting_lib:obj"'
+forge_loader = '"loader": "forge:obj"'
+old_marker = '"porting_lib:obj_marker": true'
+loader_changed = 0
+marker_changed = 0
+
 for path in assets.rglob('*.json'):
     text = path.read_text()
-    if old in text:
-        path.write_text(text.replace(old, new))
-        changed += 1
+    updated = text.replace(old_loader, forge_loader)
+    if updated != text:
+        loader_changed += 1
+    text = updated
 
-if changed < 1:
-    raise SystemExit("Expected at least one Porting Lib OBJ model to translate for Forge")
+    updated = text.replace(old_marker, '"loader": "forge:obj"')
+    if updated != text:
+        marker_changed += 1
+    if updated != path.read_text():
+        path.write_text(updated)
 
-remaining_loaders = []
+if loader_changed < 1:
+    raise SystemExit("Expected at least one Porting Lib OBJ loader to translate for Forge")
+if marker_changed < 1:
+    raise SystemExit("Expected Porting Lib OBJ marker models to translate for Forge")
+
+remaining = []
 for path in assets.rglob('*.json'):
     text = path.read_text()
-    if '"loader": "porting_lib:' in text:
-        remaining_loaders.append(str(path))
-if remaining_loaders:
-    raise SystemExit("Unported Porting Lib model loader references remain: " + ", ".join(remaining_loaders))
+    if '"loader": "porting_lib:' in text or '"porting_lib:obj_marker"' in text:
+        remaining.append(str(path))
+if remaining:
+    raise SystemExit("Unported Porting Lib OBJ model references remain: " + ", ".join(remaining))
 
-print(f"Translated {changed} Porting Lib OBJ model definition(s) to Forge OBJ loader")
+print(f"Translated {loader_changed} Porting Lib OBJ loader(s) and {marker_changed} OBJ marker model(s) to Forge OBJ")
 PY
 
 # Assert representative generated assets that were missing in the first real
