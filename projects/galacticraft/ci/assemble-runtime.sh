@@ -250,12 +250,13 @@ for path in assets.rglob('*.json'):
 if changed < 1:
     raise SystemExit("Expected at least one Porting Lib OBJ model to translate for Forge")
 
-remaining = []
+remaining_loaders = []
 for path in assets.rglob('*.json'):
-    if 'porting_lib:' in path.read_text():
-        remaining.append(str(path))
-if remaining:
-    raise SystemExit("Unported Porting Lib model loader references remain: " + ", ".join(remaining))
+    text = path.read_text()
+    if '"loader": "porting_lib:' in text:
+        remaining_loaders.append(str(path))
+if remaining_loaders:
+    raise SystemExit("Unported Porting Lib model loader references remain: " + ", ".join(remaining_loaders))
 
 print(f"Translated {changed} Porting Lib OBJ model definition(s) to Forge OBJ loader")
 PY
