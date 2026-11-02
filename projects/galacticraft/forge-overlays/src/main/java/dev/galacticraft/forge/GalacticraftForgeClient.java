@@ -25,11 +25,43 @@ import dev.galacticraft.mod.client.gui.screen.ingame.OxygenStorageModuleScreen;
 import dev.galacticraft.mod.client.gui.screen.ingame.RefineryScreen;
 import dev.galacticraft.mod.client.gui.screen.ingame.RocketInventoryScreen;
 import dev.galacticraft.mod.client.gui.screen.ingame.RocketWorkbenchScreen;
+import dev.galacticraft.mod.client.model.entity.ArchGreyEntityModel;
+import dev.galacticraft.mod.client.model.entity.CometCubeEntityModel;
+import dev.galacticraft.mod.client.model.entity.EvolvedCreeperEntityModel;
+import dev.galacticraft.mod.client.model.entity.GazerEntityModel;
+import dev.galacticraft.mod.client.model.entity.GreyEntityModel;
+import dev.galacticraft.mod.client.model.entity.LanderModel;
+import dev.galacticraft.mod.client.model.entity.OliGrubEntityModel;
+import dev.galacticraft.mod.client.model.entity.RumblerEntityModel;
+import dev.galacticraft.mod.client.render.block.entity.AdvancedSolarPanelBlockEntityRenderer;
+import dev.galacticraft.mod.client.render.block.entity.BasicSolarPanelBlockEntityRenderer;
+import dev.galacticraft.mod.client.render.block.entity.FluidPipeBlockEntityRenderer;
+import dev.galacticraft.mod.client.render.entity.ArchGreyEntityRenderer;
+import dev.galacticraft.mod.client.render.entity.BubbleEntityRenderer;
+import dev.galacticraft.mod.client.render.entity.CometCubeEntityRenderer;
+import dev.galacticraft.mod.client.render.entity.EvolvedCreeperEntityRenderer;
+import dev.galacticraft.mod.client.render.entity.EvolvedEvokerEntityRenderer;
+import dev.galacticraft.mod.client.render.entity.EvolvedPillagerEntityRenderer;
+import dev.galacticraft.mod.client.render.entity.EvolvedSkeletonEntityRenderer;
+import dev.galacticraft.mod.client.render.entity.EvolvedSpiderEntityRenderer;
+import dev.galacticraft.mod.client.render.entity.EvolvedVindicatorEntityRenderer;
+import dev.galacticraft.mod.client.render.entity.EvolvedZombieRenderer;
+import dev.galacticraft.mod.client.render.entity.GazerEntityRenderer;
+import dev.galacticraft.mod.client.render.entity.GreyEntityRenderer;
+import dev.galacticraft.mod.client.render.entity.LanderEntityRenderer;
+import dev.galacticraft.mod.client.render.entity.OliGrubEntityRenderer;
+import dev.galacticraft.mod.client.render.entity.RumblerEntityRenderer;
+import dev.galacticraft.mod.client.render.entity.rocket.RocketEntityRenderer;
+import dev.galacticraft.mod.client.render.entity.model.GCEntityModelLayer;
+import dev.galacticraft.mod.content.GCBlockEntityTypes;
 import dev.galacticraft.mod.content.GCBlocks;
+import dev.galacticraft.mod.content.GCEntityTypes;
 import dev.galacticraft.mod.screen.GCMenuTypes;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
@@ -45,6 +77,47 @@ public final class GalacticraftForgeClient {
 
     public static void register(IEventBus modBus) {
         modBus.addListener(GalacticraftForgeClient::onClientSetup);
+        modBus.addListener(GalacticraftForgeClient::registerRenderers);
+        modBus.addListener(GalacticraftForgeClient::registerLayerDefinitions);
+    }
+
+
+    private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerEntityRenderer(GCEntityTypes.EVOLVED_ZOMBIE, EvolvedZombieRenderer::new);
+        event.registerEntityRenderer(GCEntityTypes.EVOLVED_CREEPER, EvolvedCreeperEntityRenderer::new);
+        event.registerEntityRenderer(GCEntityTypes.EVOLVED_SKELETON, EvolvedSkeletonEntityRenderer::new);
+        event.registerEntityRenderer(GCEntityTypes.EVOLVED_SPIDER, EvolvedSpiderEntityRenderer::new);
+        event.registerEntityRenderer(GCEntityTypes.EVOLVED_EVOKER, EvolvedEvokerEntityRenderer::new);
+        event.registerEntityRenderer(GCEntityTypes.EVOLVED_PILLAGER, EvolvedPillagerEntityRenderer::new);
+        event.registerEntityRenderer(GCEntityTypes.EVOLVED_VINDICATOR, EvolvedVindicatorEntityRenderer::new);
+        event.registerEntityRenderer(GCEntityTypes.GAZER, GazerEntityRenderer::new);
+        event.registerEntityRenderer(GCEntityTypes.RUMBLER, RumblerEntityRenderer::new);
+        event.registerEntityRenderer(GCEntityTypes.COMET_CUBE, CometCubeEntityRenderer::new);
+        event.registerEntityRenderer(GCEntityTypes.OLI_GRUB, OliGrubEntityRenderer::new);
+        event.registerEntityRenderer(GCEntityTypes.GREY, GreyEntityRenderer::new);
+        event.registerEntityRenderer(GCEntityTypes.ARCH_GREY, ArchGreyEntityRenderer::new);
+        event.registerEntityRenderer(GCEntityTypes.BUBBLE, BubbleEntityRenderer::new);
+        event.registerEntityRenderer(GCEntityTypes.ROCKET, RocketEntityRenderer::new);
+        event.registerEntityRenderer(GCEntityTypes.LANDER, LanderEntityRenderer::new);
+
+        event.registerBlockEntityRenderer(GCBlockEntityTypes.BASIC_SOLAR_PANEL, BasicSolarPanelBlockEntityRenderer::new);
+        event.registerBlockEntityRenderer(GCBlockEntityTypes.ADVANCED_SOLAR_PANEL, AdvancedSolarPanelBlockEntityRenderer::new);
+        event.registerBlockEntityRenderer(GCBlockEntityTypes.GLASS_FLUID_PIPE, FluidPipeBlockEntityRenderer::new);
+    }
+
+    private static void registerLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        event.registerLayerDefinition(GCEntityModelLayer.EVOLVED_CREEPER,
+                () -> EvolvedCreeperEntityModel.getTexturedModelData(CubeDeformation.NONE));
+        event.registerLayerDefinition(GCEntityModelLayer.EVOLVED_CREEPER_ARMOR,
+                () -> EvolvedCreeperEntityModel.getTexturedModelData(new CubeDeformation(2.0f)));
+        event.registerLayerDefinition(GCEntityModelLayer.GAZER, GazerEntityModel::createBodyLayer);
+        event.registerLayerDefinition(GCEntityModelLayer.RUMBLER, RumblerEntityModel::createBodyLayer);
+        event.registerLayerDefinition(GCEntityModelLayer.COMET_CUBE, CometCubeEntityModel::createBodyLayer);
+        event.registerLayerDefinition(GCEntityModelLayer.OLI_GRUB, OliGrubEntityModel::createBodyLayer);
+        event.registerLayerDefinition(GCEntityModelLayer.GREY, GreyEntityModel::createBodyLayer);
+        event.registerLayerDefinition(GCEntityModelLayer.ARCH_GREY, ArchGreyEntityModel::createBodyLayer);
+        event.registerLayerDefinition(GCEntityModelLayer.LANDER, LanderModel::createBodyLayer);
+        event.registerLayerDefinition(GCEntityModelLayer.SOLAR_PANEL, BasicSolarPanelBlockEntityRenderer::getTexturedModelData);
     }
 
     private static void onClientSetup(FMLClientSetupEvent event) {
