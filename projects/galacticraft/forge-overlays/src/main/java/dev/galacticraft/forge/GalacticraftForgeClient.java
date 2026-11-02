@@ -37,7 +37,6 @@ import dev.galacticraft.mod.client.model.entity.RumblerEntityModel;
 import dev.galacticraft.mod.client.render.block.entity.AdvancedSolarPanelBlockEntityRenderer;
 import dev.galacticraft.mod.client.render.block.entity.BasicSolarPanelBlockEntityRenderer;
 import dev.galacticraft.mod.client.render.block.entity.FluidPipeBlockEntityRenderer;
-import dev.galacticraft.mod.client.render.entity.ArchGreyEntityRenderer;
 import dev.galacticraft.mod.client.render.entity.BubbleEntityRenderer;
 import dev.galacticraft.mod.client.render.entity.CometCubeEntityRenderer;
 import dev.galacticraft.mod.client.render.entity.EvolvedCreeperEntityRenderer;
@@ -121,7 +120,7 @@ public final class GalacticraftForgeClient {
         event.registerEntityRenderer(GCEntityTypes.COMET_CUBE, CometCubeEntityRenderer::new);
         event.registerEntityRenderer(GCEntityTypes.OLI_GRUB, OliGrubEntityRenderer::new);
         event.registerEntityRenderer(GCEntityTypes.GREY, GreyEntityRenderer::new);
-        event.registerEntityRenderer(GCEntityTypes.ARCH_GREY, ArchGreyEntityRenderer::new);
+        event.registerEntityRenderer(GCEntityTypes.ARCH_GREY, GreyEntityRenderer::arch);
         event.registerEntityRenderer(GCEntityTypes.BUBBLE, BubbleEntityRenderer::new);
         event.registerEntityRenderer(GCEntityTypes.ROCKET, RocketEntityRenderer::new);
         event.registerEntityRenderer(GCEntityTypes.LANDER, LanderEntityRenderer::new);
