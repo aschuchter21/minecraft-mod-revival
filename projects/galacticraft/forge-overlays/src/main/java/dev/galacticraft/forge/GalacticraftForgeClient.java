@@ -4,6 +4,7 @@
  */
 package dev.galacticraft.forge;
 
+import dev.galacticraft.mod.client.GCKeyBinds;
 import dev.galacticraft.mod.client.gui.screen.ingame.AdvancedSolarPanelScreen;
 import dev.galacticraft.mod.client.gui.screen.ingame.AirlockControllerScreen;
 import dev.galacticraft.mod.client.gui.screen.ingame.BasicSolarPanelScreen;
@@ -53,15 +54,24 @@ import dev.galacticraft.mod.client.render.entity.OliGrubEntityRenderer;
 import dev.galacticraft.mod.client.render.entity.RumblerEntityRenderer;
 import dev.galacticraft.mod.client.render.entity.rocket.RocketEntityRenderer;
 import dev.galacticraft.mod.client.render.entity.model.GCEntityModelLayer;
+import dev.galacticraft.mod.client.particle.CryoFreezeParticle;
+import dev.galacticraft.mod.client.particle.DrippingFuelProvider;
+import dev.galacticraft.mod.client.particle.DrippingOilProvider;
+import dev.galacticraft.mod.client.particle.FallingCrudeOilProvider;
+import dev.galacticraft.mod.client.particle.FallingFuelProvider;
+import dev.galacticraft.mod.client.particle.LanderParticle;
 import dev.galacticraft.mod.content.GCBlockEntityTypes;
 import dev.galacticraft.mod.content.GCBlocks;
 import dev.galacticraft.mod.content.GCEntityTypes;
+import dev.galacticraft.mod.particle.GCParticleTypes;
 import dev.galacticraft.mod.screen.GCMenuTypes;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
@@ -79,8 +89,24 @@ public final class GalacticraftForgeClient {
         modBus.addListener(GalacticraftForgeClient::onClientSetup);
         modBus.addListener(GalacticraftForgeClient::registerRenderers);
         modBus.addListener(GalacticraftForgeClient::registerLayerDefinitions);
+        modBus.addListener(GalacticraftForgeClient::registerKeyMappings);
+        modBus.addListener(GalacticraftForgeClient::registerParticleProviders);
     }
 
+
+
+    private static void registerKeyMappings(RegisterKeyMappingsEvent event) {
+        event.register(GCKeyBinds.OPEN_ROCKET_INVENTORY);
+    }
+
+    private static void registerParticleProviders(RegisterParticleProvidersEvent event) {
+        event.registerSpriteSet(GCParticleTypes.DRIPPING_FUEL, DrippingFuelProvider::new);
+        event.registerSpriteSet(GCParticleTypes.FALLING_FUEL, FallingFuelProvider::new);
+        event.registerSpriteSet(GCParticleTypes.DRIPPING_CRUDE_OIL, DrippingOilProvider::new);
+        event.registerSpriteSet(GCParticleTypes.FALLING_CRUDE_OIL, FallingCrudeOilProvider::new);
+        event.registerSpriteSet(GCParticleTypes.CRYOGENIC_PARTICLE, CryoFreezeParticle.Provider::new);
+        event.registerSpriteSet(GCParticleTypes.LANDER_FLAME_PARTICLE, LanderParticle.Provider::new);
+    }
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(GCEntityTypes.EVOLVED_ZOMBIE, EvolvedZombieRenderer::new);
