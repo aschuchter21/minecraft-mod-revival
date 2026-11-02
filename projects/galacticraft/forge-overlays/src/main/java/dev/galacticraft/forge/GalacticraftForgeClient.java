@@ -53,6 +53,7 @@ import dev.galacticraft.mod.client.render.entity.OliGrubEntityRenderer;
 import dev.galacticraft.mod.client.render.entity.RumblerEntityRenderer;
 import dev.galacticraft.mod.client.render.entity.rocket.RocketEntityRenderer;
 import dev.galacticraft.mod.client.render.entity.model.GCEntityModelLayer;
+import dev.galacticraft.mod.client.render.rocket.GalacticraftRocketPartRenderers;
 import dev.galacticraft.mod.client.particle.CryoFreezeParticle;
 import dev.galacticraft.mod.client.particle.DrippingFuelProvider;
 import dev.galacticraft.mod.client.particle.DrippingOilProvider;
@@ -69,6 +70,7 @@ import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.ModelEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -90,6 +92,7 @@ public final class GalacticraftForgeClient {
         modBus.addListener(GalacticraftForgeClient::registerLayerDefinitions);
         modBus.addListener(GalacticraftForgeClient::registerKeyMappings);
         modBus.addListener(GalacticraftForgeClient::registerParticleProviders);
+        modBus.addListener(GalacticraftRocketPartRenderers::registerAdditionalModels);
     }
 
 
@@ -147,6 +150,8 @@ public final class GalacticraftForgeClient {
 
     private static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
+            GalacticraftRocketPartRenderers.register();
+
             MenuScreens.register(GCMenuTypes.BASIC_SOLAR_PANEL, BasicSolarPanelScreen::new);
             MenuScreens.register(GCMenuTypes.ADVANCED_SOLAR_PANEL, AdvancedSolarPanelScreen::new);
             MenuScreens.register(GCMenuTypes.COAL_GENERATOR, CoalGeneratorScreen::new);
