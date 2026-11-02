@@ -240,37 +240,32 @@ import sys
 assets = Path(sys.argv[1])
 old_loader = '"loader": "porting_lib:obj"'
 forge_loader = '"loader": "forge:obj"'
-old_marker = '"porting_lib:obj_marker": true'
 loader_changed = 0
-marker_changed = 0
 
 for path in assets.rglob('*.json'):
     text = path.read_text()
     updated = text.replace(old_loader, forge_loader)
     if updated != text:
         loader_changed += 1
-    text = updated
-
-    updated = text.replace(old_marker, '"loader": "forge:obj"')
-    if updated != text:
-        marker_changed += 1
-    if updated != path.read_text():
         path.write_text(updated)
 
 if loader_changed < 1:
     raise SystemExit("Expected at least one Porting Lib OBJ loader to translate for Forge")
-if marker_changed < 1:
-    raise SystemExit("Expected Porting Lib OBJ marker models to translate for Forge")
 
-remaining = []
+# Galacticraft's rocket-part JSONs also contain the key
+# "porting_lib:obj_marker". That is application metadata consumed by
+# GalacticraftRocketPartRenderers, not a model-loader id. Keep those markers
+# intact until that custom model pipeline is ported natively; treating them as
+# loader references corrupts the JSON shape and caused CI #111 to fail.
+remaining_loaders = []
 for path in assets.rglob('*.json'):
     text = path.read_text()
-    if '"loader": "porting_lib:' in text or '"porting_lib:obj_marker"' in text:
-        remaining.append(str(path))
-if remaining:
-    raise SystemExit("Unported Porting Lib OBJ model references remain: " + ", ".join(remaining))
+    if '"loader": "porting_lib:' in text:
+        remaining_loaders.append(str(path))
+if remaining_loaders:
+    raise SystemExit("Unported Porting Lib model loader ids remain: " + ", ".join(remaining_loaders))
 
-print(f"Translated {loader_changed} Porting Lib OBJ loader(s) and {marker_changed} OBJ marker model(s) to Forge OBJ")
+print(f"Translated {loader_changed} Porting Lib OBJ loader(s) to Forge OBJ; preserved Galacticraft rocket OBJ marker metadata")
 PY
 
 # Assert representative generated assets that were missing in the first real
