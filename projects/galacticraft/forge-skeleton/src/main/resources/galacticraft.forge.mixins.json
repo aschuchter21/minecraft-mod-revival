@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.galacticraft.forge.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "galacticraft.forge.refmap.json",
+  "mixins": [
+    "PlayerGearMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
