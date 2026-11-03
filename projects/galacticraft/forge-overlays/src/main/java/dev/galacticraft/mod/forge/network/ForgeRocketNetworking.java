@@ -7,10 +7,13 @@ package dev.galacticraft.mod.forge.network;
 import dev.galacticraft.api.accessor.SatelliteAccessor;
 import dev.galacticraft.api.registry.AddonRegistries;
 import dev.galacticraft.api.rocket.RocketData;
+import dev.galacticraft.api.rocket.LaunchStage;
 import dev.galacticraft.api.universe.celestialbody.CelestialBody;
 import dev.galacticraft.api.universe.celestialbody.landable.Landable;
 import dev.galacticraft.api.universe.celestialbody.landable.teleporter.CelestialTeleporter;
 import dev.galacticraft.mod.Constant;
+import dev.galacticraft.mod.content.entity.RocketEntity;
+import dev.galacticraft.mod.content.entity.LanderEntity;
 import dev.galacticraft.mod.forge.compat.ForgeRocketTravelState;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -18,6 +21,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
@@ -26,6 +32,8 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 import java.util.Objects;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
@@ -39,6 +47,14 @@ public final class ForgeRocketNetworking {
             PROTOCOL::equals
     );
     private static final AtomicBoolean REGISTERED = new AtomicBoolean();
+    private static final Map<ServerPlayer, Integer> LAST_INPUT_TICK = new WeakHashMap<>();
+    public static final int JUMP = 1;
+    public static final int UP = 1 << 1;
+    public static final int DOWN = 1 << 2;
+    public static final int LEFT = 1 << 3;
+    public static final int RIGHT = 1 << 4;
+    public static final int SNEAK = 1 << 5;
+    private static final int VALID_INPUT_MASK = JUMP | UP | DOWN | LEFT | RIGHT | SNEAK;
 
     private ForgeRocketNetworking() {
     }
@@ -60,6 +76,13 @@ public final class ForgeRocketNetworking {
                 SelectPlanetPacket::decode,
                 SelectPlanetPacket::handle
         );
+        CHANNEL.registerMessage(
+                2,
+                VehicleInputPacket.class,
+                VehicleInputPacket::encode,
+                VehicleInputPacket::decode,
+                VehicleInputPacket::handle
+        );
     }
 
     public static void sendOpenPlanetMenu(ServerPlayer player, RocketData rocketData, int currentBodyId) {
@@ -72,6 +95,88 @@ public final class ForgeRocketNetworking {
     public static void selectPlanet(ResourceLocation bodyId) {
         register();
         CHANNEL.sendToServer(new SelectPlanetPacket(bodyId));
+    }
+
+    /**
+     * Send the local rider's controls; the server is responsible for applying
+     * all motion and verifies the vehicle/passenger relationship.
+     */
+    public static void sendVehicleInput(int inputFlags) {
+        if ((inputFlags & VALID_INPUT_MASK) == 0) return;
+        register();
+        CHANNEL.sendToServer(new VehicleInputPacket(inputFlags & VALID_INPUT_MASK));
+    }
+
+    /**
+     * Forge C2S replacement for rocket_jump/rocket_pitch/rocket_yaw and
+     * lander_pitch/lander_yaw/lander_accelerate.
+     *
+     * Never trust arbitrary entity IDs or client-supplied positions. This packet
+     * only controls the sender's current ridden vehicle and applies at most once
+     * per server tick.
+     */
+    public record VehicleInputPacket(int inputFlags) {
+        private static void encode(VehicleInputPacket packet, FriendlyByteBuf buf) {
+            buf.writeVarInt(packet.inputFlags);
+        }
+
+        private static VehicleInputPacket decode(FriendlyByteBuf buf) {
+            return new VehicleInputPacket(buf.readVarInt());
+        }
+
+        private static void handle(VehicleInputPacket packet, Supplier<NetworkEvent.Context> contextSupplier) {
+            NetworkEvent.Context context = contextSupplier.get();
+            ServerPlayer rider = context.getSender();
+            if (rider != null) {
+                context.enqueueWork(() -> applyInput(rider, packet.inputFlags));
+            }
+            context.setPacketHandled(true);
+        }
+
+        private static void applyInput(ServerPlayer rider, int flags) {
+            if ((flags & ~VALID_INPUT_MASK) != 0 || !rider.isPassenger()) return;
+            int tick = rider.server.getTickCount();
+            Integer prior = LAST_INPUT_TICK.get(rider);
+            if (prior != null && prior == tick) return;
+            LAST_INPUT_TICK.put(rider, tick);
+
+            Entity vehicle = rider.getVehicle();
+            if (vehicle instanceof RocketEntity rocket) {
+                if (rocket.getLaunchStage().ordinal() < LaunchStage.IGNITED.ordinal()) {
+                    if ((flags & JUMP) != 0) rocket.onJump();
+                } else if (rocket.getLaunchStage() == LaunchStage.LAUNCHED) {
+                    boolean up = (flags & UP) != 0;
+                    boolean down = (flags & DOWN) != 0;
+                    boolean left = (flags & LEFT) != 0;
+                    boolean right = (flags & RIGHT) != 0;
+                    if (up != down) {
+                        rocket.setXRot(Mth.clamp(rocket.getXRot() + (up ? -2.0F : 2.0F), -85.0F, 85.0F));
+                    }
+                    if (left != right) {
+                        rocket.setYRot(Mth.wrapDegrees(rocket.getYRot() + (left ? -2.0F : 2.0F)));
+                    }
+                    rocket.hasImpulse = true;
+                }
+            } else if (vehicle instanceof LanderEntity lander && !lander.onGround()) {
+                boolean up = (flags & UP) != 0;
+                boolean down = (flags & DOWN) != 0;
+                boolean left = (flags & LEFT) != 0;
+                boolean right = (flags & RIGHT) != 0;
+                if (up != down) {
+                    lander.setXRot(Mth.clamp(lander.getXRot() + (up ? -1.0F : 1.0F), -45.0F, 45.0F));
+                }
+                if (left != right) {
+                    lander.setYRot(Mth.wrapDegrees(lander.getYRot() + (left ? 1.0F : -1.0F)));
+                }
+                Vec3 velocity = lander.getDeltaMovement();
+                if ((flags & JUMP) != 0) {
+                    lander.setDeltaMovement(velocity.x, Math.min(velocity.y + 0.03D, lander.getY() < 90 ? -0.15D : -1.0D), velocity.z);
+                } else if ((flags & SNEAK) != 0) {
+                    lander.setDeltaMovement(velocity.x, Math.max(velocity.y - 0.022D, -1.0D), velocity.z);
+                }
+                lander.hasImpulse = true;
+            }
+        }
     }
 
     public record OpenPlanetMenuPacket(CompoundTag rocketData, int currentBodyId) {
