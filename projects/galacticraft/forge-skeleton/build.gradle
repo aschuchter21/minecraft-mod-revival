@@ -38,8 +38,23 @@ legacyForge {
     }
 }
 
+mixin {
+    add sourceSets.main, 'galacticraft.forge.refmap.json'
+    config 'galacticraft.forge.mixins.json'
+}
+
 repositories {
     mavenCentral()
+}
+
+dependencies {
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+}
+
+tasks.named('jar', Jar) {
+    manifest.attributes([
+        'MixinConfigs': 'galacticraft.forge.mixins.json'
+    ])
 }
 
 tasks.withType(JavaCompile).configureEach {
