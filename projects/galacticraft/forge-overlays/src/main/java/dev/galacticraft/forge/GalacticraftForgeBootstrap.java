@@ -29,6 +29,8 @@ import dev.galacticraft.mod.content.GCEntityTypes;
 import dev.galacticraft.mod.content.GCFluids;
 import dev.galacticraft.mod.content.entity.data.GCEntityDataSerializers;
 import dev.galacticraft.mod.content.item.GCItems;
+import dev.galacticraft.mod.content.item.GCCreativeModeTabs;
+import dev.galacticraft.mod.structure.GCStructurePieceTypes;
 import dev.galacticraft.mod.data.gen.SatelliteChunkGenerator;
 import dev.galacticraft.mod.forge.fluid.ForgeGCFluidTypes;
 import dev.galacticraft.mod.forge.network.ForgeRocketNetworking;
@@ -123,6 +125,18 @@ public final class GalacticraftForgeBootstrap {
         }
         if (event.getRegistryKey().equals(Registries.ITEM)) {
             GCItems.register();
+        }
+        if (event.getRegistryKey().equals(Registries.CREATIVE_MODE_TAB)) {
+            event.register(Registries.CREATIVE_MODE_TAB, Constant.id(Constant.Item.ITEM_GROUP),
+                    () -> GCCreativeModeTabs.ITEMS_GROUP);
+            event.register(Registries.CREATIVE_MODE_TAB, Constant.id(Constant.Block.ITEM_GROUP_BLOCKS),
+                    () -> GCCreativeModeTabs.BLOCKS_GROUP);
+            event.register(Registries.CREATIVE_MODE_TAB, Constant.id(Constant.Block.ITEM_GROUP_MACHINES),
+                    () -> GCCreativeModeTabs.MACHINES_GROUP);
+        }
+        if (event.getRegistryKey().equals(Registries.STRUCTURE_PIECE)) {
+            event.register(Registries.STRUCTURE_PIECE, Constant.id("moon_ruins_piece"),
+                    () -> GCStructurePieceTypes.MOON_RUINS_PIECE);
         }
         if (event.getRegistryKey().equals(Registries.MENU)) {
             GCMenuTypes.register();
