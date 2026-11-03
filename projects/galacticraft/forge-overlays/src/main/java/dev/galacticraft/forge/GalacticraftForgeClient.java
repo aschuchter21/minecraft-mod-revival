@@ -7,6 +7,7 @@ package dev.galacticraft.forge;
 import dev.galacticraft.mod.Constant;
 import dev.galacticraft.mod.client.GCKeyBinds;
 import dev.galacticraft.mod.client.gui.overlay.RocketOverlay;
+import dev.galacticraft.mod.client.gui.overlay.OxygenOverlay;
 import dev.galacticraft.mod.client.gui.overlay.LanderOverlay;
 import dev.galacticraft.mod.client.gui.overlay.CountdownOverlay;
 import dev.galacticraft.mod.client.gui.screen.ingame.AdvancedSolarPanelScreen;
@@ -118,6 +119,9 @@ public final class GalacticraftForgeClient {
     }
 
     private static void registerGuiOverlays(RegisterGuiOverlaysEvent event) {
+        event.registerAboveAll("oxygen_tanks", (gui, graphics, partialTick, width, height) -> {
+            OxygenOverlay.onHudRender(graphics, partialTick);
+        });
         event.registerAboveAll("rocket_altitude", (gui, graphics, partialTick, width, height) -> {
             if (Minecraft.getInstance().player != null) {
                 RocketOverlay.onHudRender(graphics, partialTick);
