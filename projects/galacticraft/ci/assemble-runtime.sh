@@ -156,6 +156,47 @@ if "FabricBlockEntityTypeBuilder" in source or "net.fabricmc.fabric.api.object.b
 out_path.write_text(source)
 PY
 
+# Machine definitions are accessed by nearly every machine block entity.
+# The recovered source retains three Fabric-only helper calls: fuel lookup,
+# diamond tag and the transfer API's bucket constant. Port those helpers in
+# place without rebuilding the original 20+ machine layouts and inventories.
+GC_MACHINE_TYPES_UPSTREAM="$UPSTREAM_GC/src/main/java/dev/galacticraft/mod/content/GCMachineTypes.java"
+GC_MACHINE_TYPES_FORGE="$RUNTIME_SRC/dev/galacticraft/mod/content/GCMachineTypes.java"
+mkdir -p "$(dirname "$GC_MACHINE_TYPES_FORGE")"
+python3 - "$GC_MACHINE_TYPES_UPSTREAM" "$GC_MACHINE_TYPES_FORGE" <<'PY'
+from pathlib import Path
+import sys
+
+source = Path(sys.argv[1]).read_text()
+out = Path(sys.argv[2])
+
+replacements = [
+    ("import net.fabricmc.fabric.api.registry.FuelRegistry;\n",
+     "import net.minecraftforge.common.ForgeHooks;\n"
+     "import net.minecraft.world.item.ItemStack;\n"
+     "import net.minecraft.world.item.crafting.RecipeType;\n"),
+    ("import net.fabricmc.fabric.api.tag.convention.v1.ConventionalItemTags;\n",
+     "import net.minecraftforge.common.Tags;\n"),
+    ("import net.fabricmc.fabric.api.transfer.v1.fluid.FluidConstants;\n", ""),
+    ("ConventionalItemTags.DIAMONDS", "Tags.Items.GEMS_DIAMOND"),
+    ("Integer integer = FuelRegistry.INSTANCE.get(item);\n"
+     "                                return integer != null && integer > 0;",
+     "return ForgeHooks.getBurnTime(new ItemStack(item), RecipeType.SMELTING) > 0;"),
+    ("FluidConstants.BUCKET", "FluidResourceSlot.INTERNAL_UNITS_PER_BUCKET"),
+]
+for old, replacement in replacements:
+    occurrences = source.count(old)
+    if occurrences != 1:
+        raise SystemExit(f"Expected exactly one original GCMachineTypes pattern {old!r}; found {occurrences}")
+    source = source.replace(old, replacement)
+
+if "net.fabricmc." in source or "FuelRegistry" in source or "FluidConstants" in source:
+    raise SystemExit("Fabric API still referenced by converted GCMachineTypes")
+
+out.write_text(source)
+print("Generated Forge machine definitions for all original machine types")
+PY
+
 # All known server-side uses of the temporary Fabric migration ABI have now been
 # replaced by native Forge/vanilla code. Do not compile those compatibility shim
 # packages into the runtime at all.
