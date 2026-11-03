@@ -38,23 +38,30 @@ legacyForge {
     }
 }
 
-mixin {
-    add sourceSets.main, 'galacticraft.forge.refmap.json'
-    config 'galacticraft.forge.mixins.json'
-}
-
 repositories {
     mavenCentral()
 }
 
-dependencies {
-    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
-}
+// The bare Forge skeleton is a separate CI build with no Galacticraft mixin
+// sources; enabling the Mixin AP for it produces no refmap mapping file and
+// causes reobfJar to fail. When the actual Forge overlays are copied into the
+// full runtime project, the gear mixin exists and both dev and production
+// remapping are enabled.
+if (file('src/main/java/dev/galacticraft/forge/mixin/PlayerGearMixin.java').exists()) {
+    mixin {
+        add sourceSets.main, 'galacticraft.forge.refmap.json'
+        config 'galacticraft.forge.mixins.json'
+    }
 
-tasks.named('jar', Jar) {
-    manifest.attributes([
-        'MixinConfigs': 'galacticraft.forge.mixins.json'
-    ])
+    dependencies {
+        annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+    }
+
+    tasks.named('jar', Jar) {
+        manifest.attributes([
+            'MixinConfigs': 'galacticraft.forge.mixins.json'
+        ])
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {
