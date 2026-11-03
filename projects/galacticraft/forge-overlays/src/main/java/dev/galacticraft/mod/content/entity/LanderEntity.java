@@ -32,6 +32,23 @@ public class LanderEntity extends Entity {
     }
 
     @Override
+    protected boolean canAddPassenger(Entity passenger) {
+        return this.getPassengers().isEmpty();
+    }
+
+    @Override
+    public boolean isPickable() {
+        return true;
+    }
+
+    @Override
+    public void positionRider(Entity passenger, Entity.MoveFunction moveFunction) {
+        if (this.hasPassenger(passenger)) {
+            moveFunction.accept(passenger, this.getX(), this.getY() + 1.1D, this.getZ());
+        }
+    }
+
+    @Override
     protected void defineSynchedData() {
     }
 
