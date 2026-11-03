@@ -68,6 +68,9 @@ import dev.galacticraft.mod.content.GCBlockEntityTypes;
 import dev.galacticraft.mod.content.GCBlocks;
 import dev.galacticraft.mod.content.GCEntityTypes;
 import dev.galacticraft.mod.events.ClientEventHandler;
+import dev.galacticraft.mod.content.entity.RocketEntity;
+import dev.galacticraft.mod.content.entity.LanderEntity;
+import dev.galacticraft.mod.forge.network.ForgeRocketNetworking;
 import dev.galacticraft.mod.particle.GCParticleTypes;
 import dev.galacticraft.mod.screen.GCMenuTypes;
 import net.minecraft.client.Minecraft;
@@ -133,9 +136,22 @@ public final class GalacticraftForgeClient {
     }
 
     private static void clientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase == TickEvent.Phase.END) {
-            LanderOverlay.clientTick(Minecraft.getInstance());
-        }
+        if (event.phase != TickEvent.Phase.END) return;
+        Minecraft minecraft = Minecraft.getInstance();
+        LanderOverlay.clientTick(minecraft);
+
+        if (minecraft.player == null || minecraft.level == null) return;
+        if (!(minecraft.player.getVehicle() instanceof RocketEntity)
+                && !(minecraft.player.getVehicle() instanceof LanderEntity)) return;
+
+        int flags = 0;
+        if (minecraft.player.input.jumping) flags |= ForgeRocketNetworking.JUMP;
+        if (minecraft.player.input.up) flags |= ForgeRocketNetworking.UP;
+        if (minecraft.player.input.down) flags |= ForgeRocketNetworking.DOWN;
+        if (minecraft.player.input.left) flags |= ForgeRocketNetworking.LEFT;
+        if (minecraft.player.input.right) flags |= ForgeRocketNetworking.RIGHT;
+        if (minecraft.player.input.shiftKeyDown) flags |= ForgeRocketNetworking.SNEAK;
+        ForgeRocketNetworking.sendVehicleInput(flags);
     }
 
     private static void registerKeyMappings(RegisterKeyMappingsEvent event) {
