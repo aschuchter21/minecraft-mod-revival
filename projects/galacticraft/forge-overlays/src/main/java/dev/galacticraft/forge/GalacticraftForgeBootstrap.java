@@ -60,6 +60,7 @@ public final class GalacticraftForgeBootstrap {
         // contain their built-in type objects before Forge creates the synced datapack registries.
         BuiltinObjects.register();
         BuiltInRocketRegistries.initialize();
+        GalacticraftForgeWorldgen.installMoonBiomePreset();
         modBus.addListener(this::registerDataPackRegistries);
         modBus.addListener(this::registerForgeAndVanillaEntries);
         modBus.addListener(this::registerEntityAttributes);
@@ -107,6 +108,7 @@ public final class GalacticraftForgeBootstrap {
      * exact original IDs and object graph while the remaining classes are source-ported.
      */
     private void registerForgeAndVanillaEntries(RegisterEvent event) {
+        GalacticraftForgeWorldgen.register(event);
         GcApiEntityAttributes.register(event);
         ForgeGCFluidTypes.register(event);
         Gases.register(event);
