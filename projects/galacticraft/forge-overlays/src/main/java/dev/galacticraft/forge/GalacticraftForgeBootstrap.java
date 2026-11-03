@@ -35,6 +35,7 @@ import dev.galacticraft.mod.structure.GCStructurePieceTypes;
 import dev.galacticraft.mod.data.gen.SatelliteChunkGenerator;
 import dev.galacticraft.mod.forge.fluid.ForgeGCFluidTypes;
 import dev.galacticraft.mod.forge.network.ForgeRocketNetworking;
+import dev.galacticraft.mod.forge.network.ForgeGearNetworking;
 import dev.galacticraft.mod.particle.GCParticleTypes;
 import dev.galacticraft.mod.recipe.GCRecipes;
 import dev.galacticraft.mod.screen.GCMenuTypes;
@@ -73,6 +74,12 @@ public final class GalacticraftForgeBootstrap {
         MinecraftForge.EVENT_BUS.addListener(GalacticraftForgeBlockHooks::onBlockToolModification);
 
         ForgeRocketNetworking.register();
+        ForgeGearNetworking.register();
+        MinecraftForge.EVENT_BUS.addListener(ForgeGearNetworking::onLogin);
+        MinecraftForge.EVENT_BUS.addListener(ForgeGearNetworking::onRespawn);
+        MinecraftForge.EVENT_BUS.addListener(ForgeGearNetworking::onChangeDimension);
+        MinecraftForge.EVENT_BUS.addListener(ForgeGearNetworking::onStartTracking);
+        MinecraftForge.EVENT_BUS.addListener(ForgeGearNetworking::onClone);
         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> GalacticraftForgeClient.register(modBus));
         LOGGER.info("Galacticraft Forge 1.20.1 runtime bootstrap loaded");
     }
