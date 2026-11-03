@@ -4,7 +4,11 @@
  */
 package dev.galacticraft.forge;
 
+import dev.galacticraft.mod.Constant;
 import dev.galacticraft.mod.client.GCKeyBinds;
+import dev.galacticraft.mod.client.gui.overlay.RocketOverlay;
+import dev.galacticraft.mod.client.gui.overlay.LanderOverlay;
+import dev.galacticraft.mod.client.gui.overlay.CountdownOverlay;
 import dev.galacticraft.mod.client.gui.screen.ingame.AdvancedSolarPanelScreen;
 import dev.galacticraft.mod.client.gui.screen.ingame.AirlockControllerScreen;
 import dev.galacticraft.mod.client.gui.screen.ingame.BasicSolarPanelScreen;
@@ -66,6 +70,7 @@ import dev.galacticraft.mod.content.GCEntityTypes;
 import dev.galacticraft.mod.events.ClientEventHandler;
 import dev.galacticraft.mod.particle.GCParticleTypes;
 import dev.galacticraft.mod.screen.GCMenuTypes;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
@@ -73,7 +78,11 @@ import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.ModelEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
+import net.minecraftforge.client.event.RegisterDimensionSpecialEffectsEvent;
 import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
@@ -93,10 +102,41 @@ public final class GalacticraftForgeClient {
         modBus.addListener(GalacticraftForgeClient::registerLayerDefinitions);
         modBus.addListener(GalacticraftForgeClient::registerKeyMappings);
         modBus.addListener(GalacticraftForgeClient::registerParticleProviders);
+        modBus.addListener(GalacticraftForgeClient::registerDimensionEffects);
+        modBus.addListener(GalacticraftForgeClient::registerGuiOverlays);
+        MinecraftForge.EVENT_BUS.addListener(GalacticraftForgeClient::clientTick);
         modBus.addListener(GalacticraftRocketPartRenderers::registerAdditionalModels);
     }
 
 
+
+    private static void registerDimensionEffects(RegisterDimensionSpecialEffectsEvent event) {
+        event.register(Constant.id("moon"), ForgeMoonDimensionEffects.INSTANCE);
+    }
+
+    private static void registerGuiOverlays(RegisterGuiOverlaysEvent event) {
+        event.registerAboveAll("rocket_altitude", (gui, graphics, partialTick, width, height) -> {
+            if (Minecraft.getInstance().player != null) {
+                RocketOverlay.onHudRender(graphics, partialTick);
+            }
+        });
+        event.registerAboveAll("lander_status", (gui, graphics, partialTick, width, height) -> {
+            if (Minecraft.getInstance().player != null) {
+                LanderOverlay.onRenderHud(graphics, partialTick);
+            }
+        });
+        event.registerAboveAll("rocket_countdown", (gui, graphics, partialTick, width, height) -> {
+            if (Minecraft.getInstance().player != null) {
+                CountdownOverlay.renderCountdown(graphics, partialTick);
+            }
+        });
+    }
+
+    private static void clientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            LanderOverlay.clientTick(Minecraft.getInstance());
+        }
+    }
 
     private static void registerKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(GCKeyBinds.OPEN_ROCKET_INVENTORY);
