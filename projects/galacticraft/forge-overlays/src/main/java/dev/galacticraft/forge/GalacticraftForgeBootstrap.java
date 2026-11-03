@@ -35,6 +35,7 @@ import dev.galacticraft.mod.data.gen.SatelliteChunkGenerator;
 import dev.galacticraft.mod.forge.fluid.ForgeGCFluidTypes;
 import dev.galacticraft.mod.forge.network.ForgeRocketNetworking;
 import dev.galacticraft.mod.particle.GCParticleTypes;
+import dev.galacticraft.mod.recipe.GCRecipes;
 import dev.galacticraft.mod.screen.GCMenuTypes;
 import net.minecraft.core.registries.Registries;
 import net.minecraftforge.api.distmarker.Dist;
@@ -125,6 +126,20 @@ public final class GalacticraftForgeBootstrap {
         }
         if (event.getRegistryKey().equals(Registries.ITEM)) {
             GCItems.register();
+        }
+        if (event.getRegistryKey().equals(Registries.RECIPE_TYPE)) {
+            event.register(Registries.RECIPE_TYPE, Constant.id(Constant.Recipe.FABRICATION),
+                    () -> GCRecipes.FABRICATION_TYPE);
+            event.register(Registries.RECIPE_TYPE, Constant.id(Constant.Recipe.COMPRESSING),
+                    () -> GCRecipes.COMPRESSING_TYPE);
+        }
+        if (event.getRegistryKey().equals(Registries.RECIPE_SERIALIZER)) {
+            event.register(Registries.RECIPE_SERIALIZER, Constant.id(Constant.Recipe.Serializer.FABRICATION),
+                    () -> GCRecipes.FABRICATION_SERIALIZER);
+            event.register(Registries.RECIPE_SERIALIZER, Constant.id(Constant.Recipe.Serializer.COMPRESSING_SHAPELESS),
+                    () -> GCRecipes.SHAPELESS_COMPRESSING_SERIALIZER);
+            event.register(Registries.RECIPE_SERIALIZER, Constant.id(Constant.Recipe.Serializer.COMPRESSING_SHAPED),
+                    () -> GCRecipes.SHAPED_COMPRESSING_SERIALIZER);
         }
         if (event.getRegistryKey().equals(Registries.CREATIVE_MODE_TAB)) {
             event.register(Registries.CREATIVE_MODE_TAB, Constant.id(Constant.Item.ITEM_GROUP),
