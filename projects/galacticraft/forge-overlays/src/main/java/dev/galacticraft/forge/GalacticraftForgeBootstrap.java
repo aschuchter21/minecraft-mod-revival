@@ -27,6 +27,7 @@ import dev.galacticraft.mod.content.GCBlockEntityTypes;
 import dev.galacticraft.mod.content.GCBlocks;
 import dev.galacticraft.mod.content.GCEntityTypes;
 import dev.galacticraft.mod.content.GCFluids;
+import dev.galacticraft.mod.content.GCSounds;
 import dev.galacticraft.mod.content.entity.data.GCEntityDataSerializers;
 import dev.galacticraft.mod.content.item.GCItems;
 import dev.galacticraft.mod.content.item.GCCreativeModeTabs;
@@ -126,6 +127,44 @@ public final class GalacticraftForgeBootstrap {
         }
         if (event.getRegistryKey().equals(Registries.ITEM)) {
             GCItems.register();
+        }
+        if (event.getRegistryKey().equals(Registries.SOUND_EVENT)) {
+            // GCSounds' four music Holder references register as the class is initialized,
+            // while this vanilla sound registry is open for Forge registration.
+            event.register(Registries.SOUND_EVENT, Constant.id("player.unlockchest"),
+                    () -> GCSounds.PLAYER_UNLOCKCHEST);
+            event.register(Registries.SOUND_EVENT, Constant.id("player.parachute"),
+                    () -> GCSounds.PLAYER_PARACHUTE);
+            event.register(Registries.SOUND_EVENT, Constant.id("player.openairlock"),
+                    () -> GCSounds.PLAYER_OPENAIRLOCK);
+            event.register(Registries.SOUND_EVENT, Constant.id("player.closeairlock"),
+                    () -> GCSounds.PLAYER_CLOSEAIRLOCK);
+            event.register(Registries.SOUND_EVENT, Constant.id("entity.slime_death"),
+                    () -> GCSounds.ENTITY_SLIME_DEATH);
+            event.register(Registries.SOUND_EVENT, Constant.id("entity.ooh"),
+                    () -> GCSounds.ENTITY_OOH);
+            event.register(Registries.SOUND_EVENT, Constant.id("entity.ouch"),
+                    () -> GCSounds.ENTITY_OUCH);
+            event.register(Registries.SOUND_EVENT, Constant.id("entity.bosslaugh"),
+                    () -> GCSounds.ENTITY_BOSSLAUGH);
+            event.register(Registries.SOUND_EVENT, Constant.id("entity.bossdeath"),
+                    () -> GCSounds.ENTITY_BOSSDEATH);
+            event.register(Registries.SOUND_EVENT, Constant.id("entity.astrominer"),
+                    () -> GCSounds.ENTITY_ASTROMINER);
+            event.register(Registries.SOUND_EVENT, Constant.id("ambience.singledrip"),
+                    () -> GCSounds.AMBIENCE_SINGLEDRIP);
+            event.register(Registries.SOUND_EVENT, Constant.id("ambience.scaryscape"),
+                    () -> GCSounds.AMBIENCE_SCARYSCAPE);
+            event.register(Registries.SOUND_EVENT, Constant.id("shuttle.shuttle"),
+                    () -> GCSounds.SHUTTLE_SHUTTLE);
+            event.register(Registries.SOUND_EVENT, Constant.id("music.legacy.mars"),
+                    () -> GCSounds.MUSIC_LEGACY_MARS);
+            event.register(Registries.SOUND_EVENT, Constant.id("music.legacy.mimas"),
+                    () -> GCSounds.MUSIC_LEGACY_MIMAS);
+            event.register(Registries.SOUND_EVENT, Constant.id("music.legacy.orbit"),
+                    () -> GCSounds.MUSIC_LEGACY_ORBIT);
+            event.register(Registries.SOUND_EVENT, Constant.id("music.legacy.spacerace"),
+                    () -> GCSounds.MUSIC_LEGACY_SPACERACE);
         }
         if (event.getRegistryKey().equals(Registries.RECIPE_TYPE)) {
             event.register(Registries.RECIPE_TYPE, Constant.id(Constant.Recipe.FABRICATION),
